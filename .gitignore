@@ -1,0 +1,31 @@
+# Maven build output
+target/
+
+# Environment / secrets (never commit real credentials)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test output
+test-output/
+
+# Spring Boot / Java
+*.class
+hs_err_pid*
+*.hprof
