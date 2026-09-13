@@ -66,10 +66,10 @@ public class ApplicationService {
         if (!app.getApplicant().getId().equals(userId)) {
             throw new ForbiddenException("You can only withdraw your own applications");
         }
-        if (app.getStatus() == ApplicationStatus.REJECTED || app.getStatus() == ApplicationStatus.OFFER) {
+        if (app.getStatus() == ApplicationStatus.REJECTED || app.getStatus() == ApplicationStatus.OFFER || app.getStatus() == ApplicationStatus.WITHDRAWN) {
             throw new BadRequestException("Cannot withdraw an application with status: " + app.getStatus());
         }
-        app.setStatus(ApplicationStatus.REJECTED);
+        app.setStatus(ApplicationStatus.WITHDRAWN);
         log.info("Application withdrawn: id={} user={}", id, userId);
         return applicationRepository.save(app);
     }
