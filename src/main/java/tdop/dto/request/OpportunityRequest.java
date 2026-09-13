@@ -1,4 +1,5 @@
 package tdop.dto.request;
+
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -15,4 +16,14 @@ public class OpportunityRequest {
     private String salaryRange;
     private String tags;
     @NotNull private LocalDateTime deadline;
+
+    // Extended fields for Developer 02
+    private String sourceUrl;
+    private String applicationUrl;
+    private String workMode;
+    private String educationLevel;
+    private String experienceLevel;
+    private String fundingInfo;
+    private String eligibility;
+    private String requiredDocuments;
 }
