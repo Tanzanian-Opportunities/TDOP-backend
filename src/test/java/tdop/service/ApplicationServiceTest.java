@@ -17,7 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tdop.dto.request.ApplicationRequest;
 import tdop.entity.Application;
-import tdop.entity.ApplicationStatus;
+import tdop.entity.enums.ApplicationStatus;
 import tdop.entity.Opportunity;
 import tdop.entity.User;
 import tdop.exception.ResourceNotFoundException;

@@ -20,7 +20,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import tdop.dto.request.ApplicationRequest;
-import tdop.entity.ApplicationStatus;
+import tdop.entity.enums.ApplicationStatus;
 import tdop.service.ApplicationService;
 import tdop.entity.Application;
 import java.util.List;
