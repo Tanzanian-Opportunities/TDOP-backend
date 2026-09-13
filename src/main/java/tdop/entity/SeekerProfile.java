@@ -35,6 +35,12 @@ public class SeekerProfile {
     @OneToMany(mappedBy = "seekerProfile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Interest> interests = new ArrayList<>();
 
+    @OneToMany(mappedBy = "seekerProfile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Experience> experiences = new ArrayList<>();
+
+    @OneToMany(mappedBy = "seekerProfile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<CareerGoal> careerGoals = new ArrayList<>();
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

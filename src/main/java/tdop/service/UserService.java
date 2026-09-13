@@ -27,6 +27,12 @@ public class UserService {
         return toResponse(user);
     }
 
+    public Long getUserIdByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return user.getId();
+    }
+
     public UserResponse suspendUser(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setEnabled(false);

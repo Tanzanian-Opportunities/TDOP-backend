@@ -2,21 +2,28 @@ package tdop.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tdop.config.JwtUtil;
-import tdop.dto.request.AuthRequest;
 import tdop.dto.request.LoginRequest;
 import tdop.dto.request.RegisterRequest;
 import tdop.dto.response.AuthResponse;
+import tdop.dto.response.UserResponse;
 import tdop.entity.User;
 import tdop.entity.enums.UserRole;
 import tdop.exception.BadRequestException;
+import tdop.exception.ResourceNotFoundException;
 import tdop.repository.UserRepository;
 
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +34,9 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
+    private final Set<String> revokedTokens = ConcurrentHashMap.newKeySet();
+    private final java.util.Map<String, String> passwordResetTokens = new ConcurrentHashMap<>();
+
     public AuthResponse login(LoginRequest request) {
         try {
             authenticationManager.authenticate(
@@ -36,6 +46,9 @@ public class AuthService {
         }
         User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() -> new BadRequestException("User not found"));
+        if (!user.isEnabled()) {
+            throw new BadRequestException("Account is disabled");
+        }
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         return AuthResponse.builder().token(token).refreshToken(refreshToken)
@@ -54,8 +67,10 @@ public class AuthService {
             .role(role).enabled(true).verified(false).build();
         userRepository.save(user);
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return AuthResponse.builder().token(token).email(user.getEmail())
-            .fullName(user.getFullName()).role(user.getRole().name()).build();
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+        return AuthResponse.builder().token(token).refreshToken(refreshToken)
+            .email(user.getEmail()).fullName(user.getFullName())
+            .role(user.getRole().name()).build();
     }
 
     public AuthResponse refreshToken(String refreshToken) {
@@ -66,5 +81,47 @@ public class AuthService {
         return AuthResponse.builder().token(token).refreshToken(refreshToken)
             .email(user.getEmail()).fullName(user.getFullName())
             .role(user.getRole().name()).build();
+    }
+
+    public void logout(String token) {
+        revokedTokens.add(token);
+        log.info("Token revoked for logout");
+    }
+
+    public boolean isTokenRevoked(String token) {
+        return revokedTokens.contains(token);
+    }
+
+    public UserResponse getCurrentUser(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return UserResponse.builder()
+            .id(user.getId())
+            .email(user.getEmail())
+            .fullName(user.getFullName())
+            .phone(user.getPhone())
+            .role(user.getRole().name())
+            .enabled(user.isEnabled())
+            .verified(user.isVerified())
+            .build();
+    }
+
+    public void forgotPassword(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String resetToken = UUID.randomUUID().toString();
+            passwordResetTokens.put(resetToken, email);
+            log.info("Password reset token for {}: {}", email, resetToken);
+        });
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        String email = passwordResetTokens.remove(token);
+        if (email == null) {
+            throw new BadRequestException("Invalid or expired reset token");
+        }
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 }
