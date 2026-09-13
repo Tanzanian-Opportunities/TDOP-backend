@@ -2,30 +2,74 @@ package tdop.controller.admin;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import tdop.service.OpportunityService;
+import tdop.dto.response.OpportunityResponse;
 import tdop.service.AnalyticsService;
+import tdop.service.ModerationService;
+import tdop.service.OpportunityLifecycleService;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/opportunities")
 @RequiredArgsConstructor
 public class AdminOpportunityController {
 
-    private final OpportunityService opportunityService;
+    private final OpportunityLifecycleService opportunityLifecycleService;
+    private final ModerationService moderationService;
     private final AnalyticsService analyticsService;
 
+    @GetMapping
+    public ResponseEntity<List<OpportunityResponse>> listPending() {
+        return ResponseEntity.ok(opportunityLifecycleService.getPendingReview());
+    }
+
     @PutMapping("/{id}/verify")
-    public ResponseEntity<?> verify(@PathVariable Long id) {
-        return ResponseEntity.ok("Verified");
+    public ResponseEntity<OpportunityResponse> verify(@PathVariable Long id,
+                                                       @RequestParam boolean approved,
+                                                       @RequestParam(required = false) String reason,
+                                                       Authentication auth) {
+        Long userId = getUserId(auth);
+        return ResponseEntity.ok(opportunityLifecycleService.verifyOpportunity(id, userId, approved, reason));
+    }
+
+    @PostMapping("/{id}/moderate")
+    public ResponseEntity<?> moderate(@PathVariable Long id,
+                                       @RequestParam String action,
+                                       @RequestParam(required = false) String reason,
+                                       Authentication auth) {
+        Long userId = getUserId(auth);
+        return ResponseEntity.ok(moderationService.approve(id, userId, reason));
     }
 
     @DeleteMapping("/{id}/moderate")
-    public ResponseEntity<?> moderate(@PathVariable Long id) {
-        return ResponseEntity.ok("Moderated");
+    public ResponseEntity<?> moderateReject(@PathVariable Long id,
+                                             @RequestParam(required = false) String reason,
+                                             Authentication auth) {
+        Long userId = getUserId(auth);
+        return ResponseEntity.ok(moderationService.reject(id, userId, reason));
+    }
+
+    @PostMapping("/{id}/suspend")
+    public ResponseEntity<?> suspend(@PathVariable Long id,
+                                      @RequestParam(required = false) String reason,
+                                      Authentication auth) {
+        Long userId = getUserId(auth);
+        return ResponseEntity.ok(moderationService.suspend(id, userId, reason));
     }
 
     @GetMapping("/analytics")
     public ResponseEntity<?> analytics() {
         return ResponseEntity.ok(analyticsService.getDashboardStats());
+    }
+
+    @GetMapping("/moderation-queue")
+    public ResponseEntity<?> moderationQueue() {
+        return ResponseEntity.ok(moderationService.getPendingModerationQueue());
+    }
+
+    private Long getUserId(Authentication auth) {
+        return null;
     }
 }

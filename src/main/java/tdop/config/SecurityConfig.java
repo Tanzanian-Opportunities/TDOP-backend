@@ -4,9 +4,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,12 +35,27 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Public endpoints
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/auth/refresh").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
-                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/v1/organization/**").hasAnyRole("ORGANIZATION", "ADMIN")
-                .requestMatchers("/api/v1/verify/**").hasAnyRole("ORGANIZATION", "ADMIN")
+
+                // Admin endpoints - ADMIN, SUPER_ADMIN
+                .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                // Organization endpoints - ORGANIZATION, ORGANIZATION_ADMIN, ORGANIZATION_OWNER, ADMIN
+                .requestMatchers("/api/v1/organization/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ORGANIZATION_OWNER", "ADMIN", "SUPER_ADMIN")
+
+                // Verification endpoints
+                .requestMatchers("/api/v1/verify/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ORGANIZATION_OWNER", "ADMIN", "SUPER_ADMIN")
+
+                // Verification officer endpoints
+                .requestMatchers("/api/v1/verification-officer/**").hasAnyRole("VERIFICATION_OFFICER", "ADMIN", "SUPER_ADMIN")
+
+                // Moderation endpoints
+                .requestMatchers("/api/v1/moderation/**").hasAnyRole("MODERATOR", "ADMIN", "SUPER_ADMIN")
+
+                // All other requests require authentication
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

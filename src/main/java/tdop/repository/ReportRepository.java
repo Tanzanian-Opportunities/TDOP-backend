@@ -1,4 +1,5 @@
 package tdop.repository;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -9,6 +10,15 @@ import java.util.List;
 @Repository
 public interface ReportRepository extends JpaRepository<Report, Long> {
     List<Report> findByStatusOrderByCreatedAtAsc(ReportStatus status);
+
     @Query("SELECT r.status, COUNT(r) FROM Report r GROUP BY r.status")
     List<Object[]> countByStatusGrouped();
+
+    long countByStatus(ReportStatus status);
+
+    List<Report> findByAssignedToId(Long userId);
+
+    List<Report> findByTargetTypeAndTargetId(String targetType, Long targetId);
+
+    List<Report> findByTargetType(String targetType);
 }

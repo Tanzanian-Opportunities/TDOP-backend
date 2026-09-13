@@ -5,6 +5,8 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import tdop.entity.enums.VerificationStatus;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "verification_requests")
@@ -30,6 +32,18 @@ public class VerificationRequest {
 
     private LocalDateTime reviewedAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(columnDefinition = "TEXT")
+    private String requestedInformation;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "verificationRequest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<VerificationDocument> documents = new ArrayList<>();
 }

@@ -1,4 +1,5 @@
 package tdop.dto.response;
+
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -13,7 +14,20 @@ public class OpportunityResponse {
     private String category;
     private String salaryRange;
     private String status;
-    private java.time.LocalDateTime deadline;
+    private LocalDateTime deadline;
     private String tags;
-    private java.time.LocalDateTime createdAt;
+    private LocalDateTime createdAt;
+
+    // Extended fields
+    private String sourceUrl;
+    private String applicationUrl;
+    private String workMode;
+    private String educationLevel;
+    private String experienceLevel;
+    private String fundingInfo;
+    private boolean verified;
+    private boolean moderated;
+    private Long viewCount;
+    private Long saveCount;
+    private Long applicationCount;
 }

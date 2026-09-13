@@ -60,4 +60,41 @@ public class Opportunity {
 
     @OneToMany(mappedBy = "opportunity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Application> applications = new ArrayList<>();
+
+    // Extended fields for Developer 02
+    private String sourceUrl;
+    private String applicationUrl;
+
+    private String workMode = "ONSITE";
+
+    private String educationLevel;
+    private String experienceLevel;
+    private String fundingInfo;
+
+    @Column(columnDefinition = "TEXT")
+    private String eligibility;
+
+    @Column(columnDefinition = "TEXT")
+    private String requiredDocuments;
+
+    private boolean verified = false;
+    private LocalDateTime verifiedAt;
+    private String verifiedBy;
+
+    private boolean moderated = false;
+    private LocalDateTime moderatedAt;
+    private String moderatedBy;
+
+    private LocalDateTime publishedAt;
+
+    private boolean closingSoonNotified = false;
+
+    private String riskScore = "LOW";
+
+    private Long viewCount = 0L;
+    private Long saveCount = 0L;
+    private Long applicationCount = 0L;
+
+    @OneToMany(mappedBy = "opportunity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<OpportunityStatusHistory> statusHistory = new ArrayList<>();
 }
