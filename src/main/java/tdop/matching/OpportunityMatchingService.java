@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 import tdop.entity.Opportunity;
 import tdop.entity.Skill;
 import tdop.entity.SeekerProfile;
+import tdop.entity.Education;
+import tdop.entity.Interest;
 import tdop.repository.OpportunityRepository;
 import tdop.repository.SkillRepository;
 import tdop.repository.SeekerProfileRepository;
@@ -32,13 +34,25 @@ public class OpportunityMatchingService {
         Set<String> skillNames = new HashSet<>();
         skills.forEach(s -> skillNames.add(s.getName().toLowerCase()));
 
+        Set<String> interestCategories = new HashSet<>();
+        profile.getInterests().forEach(i -> interestCategories.add(i.getCategory().toLowerCase()));
+
+        String educationLevel = "";
+        if (profile.getEducation() != null && !profile.getEducation().isEmpty()) {
+            Education latest = profile.getEducation().get(0);
+            educationLevel = latest.getDegree() != null ? latest.getDegree().toLowerCase() : "";
+        }
+
         List<Opportunity> published = opportunityRepository.findPublished();
         for (Opportunity opp : published) {
-            int score = calculateMatchScore(opp, skillNames);
+            Map<String, Object> result = calculateMatchWithReasons(opp, skillNames, interestCategories, educationLevel);
+            int score = (int) result.get("score");
             if (score > 0) {
                 Map<String, Object> match = new HashMap<>();
                 match.put("opportunity", opp);
                 match.put("score", score);
+                match.put("reasons", result.get("reasons"));
+                match.put("matchPercentage", Math.min(score, 100));
                 matches.add(match);
             }
         }
@@ -46,13 +60,40 @@ public class OpportunityMatchingService {
         return matches;
     }
 
-    private int calculateMatchScore(Opportunity opp, Set<String> skillNames) {
+    private Map<String, Object> calculateMatchWithReasons(Opportunity opp, Set<String> skillNames,
+                                                           Set<String> interestCategories, String educationLevel) {
         int score = 0;
+        List<String> reasons = new ArrayList<>();
+
         if (opp.getTags() != null) {
             for (String tag : opp.getTags().split(",")) {
-                if (skillNames.contains(tag.trim().toLowerCase())) score += 10;
+                String trimmed = tag.trim().toLowerCase();
+                if (skillNames.contains(trimmed)) {
+                    score += 10;
+                    reasons.add("Skill match: " + tag.trim());
+                }
             }
         }
-        return score;
+
+        if (opp.getCategory() != null && interestCategories.contains(opp.getCategory().toLowerCase())) {
+            score += 5;
+            reasons.add("Interest match: " + opp.getCategory());
+        }
+
+        if (opp.getRequiredDocuments() != null && !opp.getRequiredDocuments().isEmpty()) {
+            if (educationLevel.contains("bachelor") || educationLevel.contains("degree")) {
+                score += 3;
+                reasons.add("Education level meets requirements");
+            }
+        }
+
+        if (opp.getLocation() != null && !opp.getLocation().isEmpty()) {
+            score += 1;
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("score", score);
+        result.put("reasons", reasons);
+        return result;
     }
 }

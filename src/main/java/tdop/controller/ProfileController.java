@@ -5,9 +5,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import tdop.dto.request.EducationRequest;
-import tdop.dto.request.InterestRequest;
-import tdop.dto.request.ProfileUpdateRequest;
 import tdop.dto.request.SkillRequest;
 import tdop.entity.CareerGoal;
 import tdop.entity.Experience;
@@ -32,7 +29,7 @@ public class ProfileController {
     }
 
     @PutMapping
-    public ResponseEntity<?> updateProfile(@RequestBody ProfileUpdateRequest request) {
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, Object> request) {
         Long userId = getCurrentUserId();
         return ResponseEntity.ok(seekerProfileService.updateProfile(userId, request));
     }
@@ -42,6 +39,22 @@ public class ProfileController {
         Long userId = getCurrentUserId();
         double completion = seekerProfileService.calculateProfileCompletion(userId);
         return ResponseEntity.ok(Map.of("completion", completion));
+    }
+
+    @PutMapping("/visibility")
+    public ResponseEntity<?> updateVisibility(@RequestBody Map<String, String> body) {
+        Long userId = getCurrentUserId();
+        String visibility = body.getOrDefault("visibility", "PUBLIC");
+        seekerProfileService.updateProfileVisibility(userId, visibility);
+        return ResponseEntity.ok(Map.of("visibility", visibility));
+    }
+
+    @PutMapping("/notification-preference")
+    public ResponseEntity<?> updateNotificationPreference(@RequestBody Map<String, String> body) {
+        Long userId = getCurrentUserId();
+        String preference = body.getOrDefault("preference", "ALL");
+        seekerProfileService.updateNotificationPreference(userId, preference);
+        return ResponseEntity.ok(Map.of("notificationPreference", preference));
     }
 
     @PostMapping("/skills")
@@ -58,7 +71,7 @@ public class ProfileController {
     }
 
     @PostMapping("/education")
-    public ResponseEntity<?> addEducation(@RequestBody EducationRequest request) {
+    public ResponseEntity<?> addEducation(@RequestBody Map<String, Object> request) {
         Long userId = getCurrentUserId();
         return ResponseEntity.ok(seekerProfileService.addEducation(userId, request));
     }
@@ -71,7 +84,7 @@ public class ProfileController {
     }
 
     @PostMapping("/interests")
-    public ResponseEntity<?> addInterest(@RequestBody InterestRequest request) {
+    public ResponseEntity<?> addInterest(@RequestBody Map<String, Object> request) {
         Long userId = getCurrentUserId();
         return ResponseEntity.ok(seekerProfileService.addInterest(userId, request));
     }
