@@ -24,12 +24,12 @@ WORKDIR /app
 # Copy the built JAR from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose port 8081
-EXPOSE 8081
+# Expose port 8080
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8081/api/v1/public/health || exit 1
+  CMD curl -f http://localhost:8080/api/v1/public/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
