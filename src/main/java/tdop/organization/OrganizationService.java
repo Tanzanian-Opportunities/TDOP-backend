@@ -85,7 +85,7 @@ public class OrganizationService {
         }
     }
 
-    public OrganizationMember inviteMember(Long orgId, Long inviterUserId, String email, String role) {
+    public OrganizationInvitation inviteMember(Long orgId, Long inviterUserId, String email, String role) {
         OrganizationProfile org = orgProfileRepository.findById(orgId)
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
         assertOrganizationOwnerOrAdmin(org, inviterUserId);

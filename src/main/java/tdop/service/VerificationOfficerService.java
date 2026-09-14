@@ -18,7 +18,7 @@ import java.util.List;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class VerificationService {
+public class VerificationOfficerService {
 
     private final VerificationRequestRepository verificationRequestRepository;
     private final VerificationDocumentRepository verificationDocumentRepository;

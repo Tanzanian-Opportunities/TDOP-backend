@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tdop.entity.Opportunity;
 import tdop.entity.RiskSignal;
-import tdop.entity.enums.RiskSignal.SignalType;
+import tdop.entity.RiskSignal.SignalType;
 import tdop.exception.ResourceNotFoundException;
 import tdop.repository.OpportunityRepository;
 import tdop.repository.ReportRepository;

@@ -33,6 +33,6 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, Long> 
     @Query("SELECT o FROM Opportunity o WHERE o.status IN ('PUBLISHED', 'CLOSING_SOON') AND o.deadline <= CURRENT_TIMESTAMP AND o.status != 'EXPIRED'")
     List<Opportunity> findExpiredNotMarked();
 
-    @Query("SELECT o FROM Opportunity o WHERE o.status = 'PUBLISHED' AND o.deadline > CURRENT_TIMESTAMP AND o.deadline <= CURRENT_TIMESTAMP + java.time.Duration.ofDays(7)")
+    @Query(value = "SELECT * FROM opportunities o WHERE o.status = 'PUBLISHED' AND o.deadline > CURRENT_TIMESTAMP AND o.deadline <= CURRENT_TIMESTAMP + INTERVAL '7 days'", nativeQuery = true)
     List<Opportunity> findClosingSoon();
 }

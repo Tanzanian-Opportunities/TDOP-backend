@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import tdop.entity.Application;
 import tdop.entity.enums.ApplicationStatus;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
@@ -16,4 +17,5 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     long countByOpportunityIdAndStatus(Long opportunityId, ApplicationStatus status);
     long countByOpportunityIdAndShortlisted(Long opportunityId, boolean shortlisted);
     boolean existsByApplicantIdAndOpportunityId(Long applicantId, Long opportunityId);
+    Optional<Application> findByApplicantIdAndOpportunityId(Long applicantId, Long opportunityId);
 }
