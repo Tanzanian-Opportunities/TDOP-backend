@@ -26,6 +26,14 @@ public class SeekerProfile {
     private String location;
     private String profilePicture;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private tdop.entity.enums.ProfileVisibility profileVisibility = tdop.entity.enums.ProfileVisibility.PUBLIC;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private tdop.entity.enums.NotificationPreference notificationPreference = tdop.entity.enums.NotificationPreference.ALL;
+
     @OneToMany(mappedBy = "seekerProfile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Skill> skills = new ArrayList<>();
 

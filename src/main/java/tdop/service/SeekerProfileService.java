@@ -4,11 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tdop.dto.request.EducationRequest;
-import tdop.dto.request.InterestRequest;
-import tdop.dto.request.ProfileUpdateRequest;
 import tdop.dto.request.SkillRequest;
 import tdop.entity.*;
+import tdop.entity.enums.NotificationPreference;
+import tdop.entity.enums.ProfileVisibility;
 import tdop.exception.ForbiddenException;
 import tdop.exception.ResourceNotFoundException;
 import tdop.repository.*;
@@ -52,27 +51,43 @@ public class SeekerProfileService {
         result.put("email", user.getEmail());
         result.put("phone", user.getPhone());
         result.put("location", profile.getLocation());
+        result.put("profileVisibility", profile.getProfileVisibility() != null ? profile.getProfileVisibility().name() : "PUBLIC");
+        result.put("notificationPreference", profile.getNotificationPreference() != null ? profile.getNotificationPreference().name() : "ALL");
         result.put("createdAt", profile.getCreatedAt());
         return result;
     }
 
-    public Map<String, Object> updateProfile(Long userId, ProfileUpdateRequest request) {
+    public Map<String, Object> updateProfile(Long userId, Map<String, Object> request) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         SeekerProfile profile = seekerProfileRepository.findByUserId(userId)
             .orElseGet(() -> createDefaultProfile(user));
 
-        if (request.getFullName() != null) user.setFullName(request.getFullName());
-        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.containsKey("fullName")) user.setFullName((String) request.get("fullName"));
+        if (request.containsKey("phone")) user.setPhone((String) request.get("phone"));
         userRepository.save(user);
 
-        if (request.getBio() != null) profile.setBio(request.getBio());
-        if (request.getLocation() != null) profile.setLocation(request.getLocation());
-        if (request.getProfilePicture() != null) profile.setProfilePicture(request.getProfilePicture());
+        if (request.containsKey("headline")) profile.setBio((String) request.get("headline"));
+        if (request.containsKey("summary")) profile.setBio((String) request.get("summary"));
+        if (request.containsKey("location")) profile.setLocation((String) request.get("location"));
         seekerProfileRepository.save(profile);
 
         log.info("Profile updated for user={}", userId);
         return getSeekerProfile(userId);
+    }
+
+    public void updateProfileVisibility(Long userId, String visibility) {
+        SeekerProfile profile = getOrCreateProfile(userId);
+        profile.setProfileVisibility(ProfileVisibility.valueOf(visibility));
+        seekerProfileRepository.save(profile);
+        log.info("Profile visibility updated for user={}: {}", userId, visibility);
+    }
+
+    public void updateNotificationPreference(Long userId, String preference) {
+        SeekerProfile profile = getOrCreateProfile(userId);
+        profile.setNotificationPreference(NotificationPreference.valueOf(preference));
+        seekerProfileRepository.save(profile);
+        log.info("Notification preference updated for user={}: {}", userId, preference);
     }
 
     public Skill addSkill(Long userId, SkillRequest request) {
@@ -99,18 +114,18 @@ public class SeekerProfileService {
         skillRepository.deleteById(skillId);
     }
 
-    public Education addEducation(Long userId, EducationRequest request) {
+    public Education addEducation(Long userId, Map<String, Object> request) {
         SeekerProfile profile = getOrCreateProfile(userId);
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Education education = Education.builder()
-            .institution(request.getInstitution())
-            .degree(request.getDegree())
-            .fieldOfStudy(request.getFieldOfStudy())
+            .institution((String) request.get("institution"))
+            .degree((String) request.get("degree"))
+            .fieldOfStudy((String) request.get("fieldOfStudy"))
             .user(user)
             .seekerProfile(profile)
             .build();
-        log.info("Education added for user={}: {}", userId, request.getInstitution());
+        log.info("Education added for user={}: {}", userId, request.get("institution"));
         return educationRepository.save(education);
     }
 
@@ -123,17 +138,17 @@ public class SeekerProfileService {
         educationRepository.deleteById(educationId);
     }
 
-    public Interest addInterest(Long userId, InterestRequest request) {
+    public Interest addInterest(Long userId, Map<String, Object> request) {
         SeekerProfile profile = getOrCreateProfile(userId);
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Interest interest = Interest.builder()
-            .category(request.getCategory())
-            .description(request.getDescription())
+            .category((String) request.get("category"))
+            .description((String) request.get("description"))
             .user(user)
             .seekerProfile(profile)
             .build();
-        log.info("Interest added for user={}: {}", userId, request.getCategory());
+        log.info("Interest added for user={}: {}", userId, request.get("category"));
         return interestRepository.save(interest);
     }
 
