@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import tdop.service.UserDocumentService;
 import tdop.service.UserService;
 import java.util.Map;
@@ -29,15 +30,23 @@ public class UserDocumentController {
         return ResponseEntity.ok(userDocumentService.getDocument(userId, id));
     }
 
-    @PostMapping
-    public ResponseEntity<?> uploadDocument(@RequestBody Map<String, Object> body) {
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<?> uploadDocument(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "name", defaultValue = "") String name,
+            @RequestParam(value = "documentType", defaultValue = "other") String documentType,
+            @RequestParam(value = "description", defaultValue = "") String description) {
         Long userId = getCurrentUserId();
-        String name = (String) body.getOrDefault("name", "");
-        String fileName = (String) body.getOrDefault("fileName", "");
-        String fileType = (String) body.getOrDefault("fileType", "");
-        Long fileSize = body.get("fileSize") != null ? ((Number) body.get("fileSize")).longValue() : 0L;
-        String documentType = (String) body.getOrDefault("documentType", "other");
-        String description = (String) body.getOrDefault("description", "");
+
+        String fileName = "";
+        String fileType = "";
+        long fileSize = 0;
+
+        if (file != null && !file.isEmpty()) {
+            fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "";
+            fileType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+            fileSize = file.getSize();
+        }
 
         var doc = userDocumentService.uploadDocument(userId, name, fileName, fileType, fileSize, documentType, description);
         return ResponseEntity.ok(doc);
