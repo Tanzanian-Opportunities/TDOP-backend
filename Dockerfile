@@ -1,5 +1,5 @@
 # Stage 1: Build with Maven
-FROM openjdk:17-jdk-slim AS build
+FROM openjdk:21-jdk-slim AS build
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Run with JRE
-FROM openjdk:17-jre-slim AS runtime
+FROM openjdk:21-jre-slim AS runtime
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+  CMD curl -f http://localhost:8080/api/v1/public/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -52,30 +52,50 @@ All configuration values referenced via `${ENV_VAR:default}` in `application.yml
 mvn spring-boot:run
 ```
 
-The server listens on `http://localhost:8081` (API base path `/api/v1`).
+The server listens on `http://localhost:8080` (API base path `/api/v1`).
 
 | Profile | File | Notes |
 |---|---|---|
-| Default | `application.yml` | Runs on port 8081 |
+| Default | `application.yml` | Runs on port 8080 |
 | dev | `application-dev.yml` | Uses the `tdop_dev` database |
 | prod | `application-prod.yml` | Reads credentials from environment |
 
 ### Health check
 
 ```bash
-curl http://localhost:8081/api/v1/profile
+curl http://localhost:8080/api/v1/profile
 # -> Profile view
 ```
 
 ## Demo Accounts
 
-Seeded by `V2__seed_data.sql`. Passwords are BCrypt-hashed (`seeker123`, `org123`, `admin123`):
+Seeded by `V2__seed_data.sql`. 11 users total:
 
-| Role | Email | Password |
+### Admins
+
+| Email | Password |
+|---|---|
+| `admin@tdop.go.tz` | `admin123` |
+| `superadmin@tdop.go.tz` | `superadmin` |
+| `admin2024@tdop.go.tz` | `admin2024` |
+
+### Seekers (all `seeker123`)
+
+| Email | Name |
+|---|---|
+| `john.mwangi@email.com` | John Mwangi |
+| `amina.hassan@email.com` | Amina Hassan |
+| `peter.okech@email.com` | Peter Okech |
+| `fatima.bakari@email.com` | Fatima Bakari |
+| `david.mwinyi@email.com` | David Mwinyi |
+
+### Organizations (all `org123`)
+
+| Email | Name | Verified |
 |---|---|---|
-| Seeker | `john.mwangi@email.com` | `seeker123` |
-| Organization | `info@tanzgold.com` | `org123` |
-| Admin | `admin@tdop.go.tz` | `admin123` |
+| `info@tanzgold.com` | Tanzania Gold Mining Ltd | Yes |
+| `contact@safaricomTZ.com` | Safaricom Tanzania PLC | No |
+| `hr@crdbbank.com` | CRDB Bank PLC | No |
 
 ## Authorization Model
 
@@ -179,7 +199,7 @@ mvn test
 | `DB_PASSWORD` | *(none — required)* | DB password |
 | `JWT_SECRET` | dev placeholder | Base64 signing key (>= 256 bits) |
 | `MAIL_*` | empty | SMTP for email notifications |
-| `APP_URL` | `http://localhost:8081/api/v1` | Public API base URL |
+| `APP_URL` | `http://localhost:8080/api/v1` | Public API base URL |
 
 ## Related
 
