@@ -14,7 +14,7 @@ public class TDOPApplication {
                     .load();
 
             dotenv.entries().forEach(entry -> {
-                if (System.getenv(entry.getKey()) == null) {
+                if (System.getenv(entry.getKey()) == null && entry.getValue() != null && !entry.getValue().isEmpty()) {
                     System.setProperty(entry.getKey(), entry.getValue());
                 }
             });
