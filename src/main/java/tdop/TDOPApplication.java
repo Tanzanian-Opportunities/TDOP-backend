@@ -1,9 +1,9 @@
 package tdop;
 
-import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,19 +27,29 @@ public class TDOPApplication {
             }
 
             if (Files.exists(envPath)) {
-                Dotenv dotenv = Dotenv.configure()
-                        .directory(envPath.getParent().toString())
-                        .filename(".env")
-                        .load();
+                try (BufferedReader reader = Files.newBufferedReader(envPath)) {
+                    String line;
+                    int count = 0;
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.isEmpty() || line.startsWith("#")) continue;
 
-                dotenv.entries().forEach(entry -> {
-                    if (System.getenv(entry.getKey()) == null && entry.getValue() != null && !entry.getValue().isEmpty()) {
-                        System.setProperty(entry.getKey(), entry.getValue());
+                        int eq = line.indexOf('=');
+                        if (eq <= 0) continue;
+
+                        String key = line.substring(0, eq).trim();
+                        String value = line.substring(eq + 1).trim();
+
+                        if (System.getenv(key) == null && !value.isEmpty()) {
+                            System.setProperty(key, value);
+                            count++;
+                        }
                     }
-                });
-                System.out.println("Loaded .env from: " + envPath.toAbsolutePath());
+                    System.out.println("Loaded " + count + " env vars from: " + envPath.toAbsolutePath());
+                }
             } else {
                 System.err.println("Warning: .env file not found. Using system environment variables.");
+                System.err.println("  Searched: " + envPath.toAbsolutePath());
             }
         } catch (Exception e) {
             System.err.println("Warning: Could not load .env file: " + e.getMessage());
