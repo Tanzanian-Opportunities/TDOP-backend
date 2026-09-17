@@ -39,3 +39,13 @@ mail:
 
 app:
   url: ${APP_URL:http://localhost:8080/api/v1}
+  storage:
+    upload-dir: ${STORAGE_DIR:uploads}
+    max-file-size: ${MAX_FILE_SIZE:10485760}
+
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB

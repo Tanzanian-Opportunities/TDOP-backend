@@ -24,4 +24,30 @@ public class EmailTemplate {
             + "<p>" + message + "</p>"
             + "</body></html>";
     }
+
+    public static String buildWelcomeEmail(String fullName) {
+        return "<html><body>"
+            + "<h1>Welcome to TDOP!</h1>"
+            + "<p>Hi " + fullName + ",</p>"
+            + "<p>Thank you for joining the Talent Development Opportunity Platform.</p>"
+            + "<p>Start exploring opportunities that match your skills and goals.</p>"
+            + "</body></html>";
+    }
+
+    public static String buildApplicationStatusEmail(String oppTitle, String status) {
+        return "<html><body>"
+            + "<h1>Application Status Update</h1>"
+            + "<p>Your application for <strong>" + oppTitle + "</strong> has been updated to: <strong>" + status + "</strong></p>"
+            + "<p>Log in to your dashboard for more details.</p>"
+            + "</body></html>";
+    }
+
+    public static String buildPasswordResetEmail(String link) {
+        return "<html><body>"
+            + "<h1>Password Reset</h1>"
+            + "<p>You requested a password reset. Click the link below to reset your password:</p>"
+            + "<p><a href=\"" + link + "\">Reset Password</a></p>"
+            + "<p>If you didn't request this, please ignore this email.</p>"
+            + "</body></html>";
+    }
 }

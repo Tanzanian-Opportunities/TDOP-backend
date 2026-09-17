@@ -6,6 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tdop.dto.request.OpportunityRequest;
 import tdop.dto.response.OpportunityResponse;
+import tdop.entity.Opportunity;
+import tdop.exception.ResourceNotFoundException;
+import tdop.repository.OpportunityRepository;
 import tdop.service.OpportunityService;
 import java.util.List;
 
@@ -15,6 +18,7 @@ import java.util.List;
 public class OpportunityController {
 
     private final OpportunityService opportunityService;
+    private final OpportunityRepository opportunityRepository;
 
     @GetMapping
     public ResponseEntity<List<OpportunityResponse>> browse() {
@@ -29,6 +33,15 @@ public class OpportunityController {
     @GetMapping("/filter/{category}")
     public ResponseEntity<List<OpportunityResponse>> filter(@PathVariable String category) {
         return ResponseEntity.ok(opportunityService.filterByCategory(category));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<OpportunityResponse> getById(@PathVariable Long id) {
+        Opportunity opp = opportunityRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
+        opp.setViewCount(opp.getViewCount() + 1);
+        opportunityRepository.save(opp);
+        return ResponseEntity.ok(opportunityService.toResponse(opp));
     }
 
     @PostMapping
