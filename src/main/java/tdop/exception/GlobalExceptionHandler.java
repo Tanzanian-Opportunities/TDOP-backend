@@ -46,4 +46,13 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = Map.of("errors", errors, "timestamp", LocalDateTime.now());
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        Map<String, Object> body = Map.of(
+            "error", "Internal server error",
+            "timestamp", LocalDateTime.now()
+        );
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }
