@@ -20,6 +20,11 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserById(id));
+    }
+
     @PutMapping("/{id}/suspend")
     public ResponseEntity<UserResponse> suspend(@PathVariable Long id) {
         return ResponseEntity.ok(userService.suspendUser(id));

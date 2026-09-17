@@ -39,6 +39,12 @@ public class OpportunityService {
             .map(this::toResponse).collect(Collectors.toList());
     }
 
+    public OpportunityResponse getOpportunity(Long id) {
+        Opportunity opp = opportunityRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Opportunity not found"));
+        return toResponse(opp);
+    }
+
     public OpportunityResponse createOpportunity(OpportunityRequest request, Long orgId) {
         OrganizationProfile org = organizationRepository.findById(orgId)
             .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));

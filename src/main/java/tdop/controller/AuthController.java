@@ -13,7 +13,10 @@ import tdop.dto.request.RegisterRequest;
 import tdop.dto.request.ResetPasswordRequest;
 import tdop.dto.response.AuthResponse;
 import tdop.dto.response.UserResponse;
+import tdop.exception.BadRequestException;
 import tdop.service.AuthService;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -33,8 +36,18 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refreshToken(@RequestBody AuthRequest request) {
-        return ResponseEntity.ok(authService.refreshToken(request.getEmail()));
+    public ResponseEntity<AuthResponse> refreshToken(@RequestBody(required = false) Map<String, String> body,
+                                                     @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String refreshToken = null;
+        if (body != null && body.get("refreshToken") != null) {
+            refreshToken = body.get("refreshToken");
+        } else if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            refreshToken = authHeader.substring(7);
+        }
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new BadRequestException("Refresh token missing");
+        }
+        return ResponseEntity.ok(authService.refreshToken(refreshToken));
     }
 
     @PostMapping("/logout")

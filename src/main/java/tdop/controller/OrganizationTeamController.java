@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import tdop.entity.OrganizationMember;
 import tdop.entity.OrganizationInvitation;
 import tdop.organization.OrganizationService;
+import tdop.service.UserService;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,7 @@ import java.util.Map;
 public class OrganizationTeamController {
 
     private final OrganizationService organizationService;
+    private final UserService userService;
 
     @GetMapping("/{orgId}/members")
     public ResponseEntity<List<OrganizationMember>> members(@PathVariable Long orgId) {
@@ -62,6 +64,6 @@ public class OrganizationTeamController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userService.getUserIdByEmail(auth.getName());
     }
 }

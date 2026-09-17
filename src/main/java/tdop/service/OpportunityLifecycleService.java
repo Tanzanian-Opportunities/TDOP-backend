@@ -28,6 +28,7 @@ public class OpportunityLifecycleService {
     private final OpportunityRepository opportunityRepository;
     private final OrganizationProfileRepository organizationRepository;
     private final OpportunityStatusHistoryRepository statusHistoryRepository;
+    private final AntiFraudService antiFraudService;
 
     public OpportunityResponse createDraft(OpportunityRequest request, Long orgId) {
         OrganizationProfile org = organizationRepository.findById(orgId)
@@ -60,7 +61,14 @@ public class OpportunityLifecycleService {
     public OpportunityResponse submitForReview(Long id, Long userId) {
         Opportunity opp = getAndValidateOwnership(id, userId);
         transitionStatus(opp, OpportunityStatus.SUBMITTED, "Submitted for review");
-        return toResponse(opportunityRepository.save(opp));
+        Opportunity saved = opportunityRepository.save(opp);
+        try {
+            antiFraudService.analyzeOpportunity(saved.getId());
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(OpportunityLifecycleService.class)
+                .warn("Fraud analysis failed for opportunity id={}: {}", id, e.getMessage());
+        }
+        return toResponse(saved);
     }
 
     public OpportunityResponse verifyOpportunity(Long id, Long verifierId, boolean approved, String reason) {

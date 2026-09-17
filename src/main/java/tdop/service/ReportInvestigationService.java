@@ -41,6 +41,11 @@ public class ReportInvestigationService {
         return reportRepository.findByStatusOrderByCreatedAtAsc(ReportStatus.PENDING);
     }
 
+    public Report getReportById(Long id) {
+        return reportRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
+    }
+
     public List<Report> getAllReports() {
         return reportRepository.findAll();
     }

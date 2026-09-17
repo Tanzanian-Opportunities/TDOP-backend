@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.PlatformConfig;
 import tdop.service.PlatformConfigService;
+import tdop.service.UserService;
 import java.util.List;
 
 @RestController
@@ -14,6 +15,7 @@ import java.util.List;
 public class PlatformConfigController {
 
     private final PlatformConfigService configService;
+    private final UserService userService;
 
     @GetMapping
     public ResponseEntity<List<PlatformConfig>> getAll() {
@@ -41,6 +43,6 @@ public class PlatformConfigController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userService.getUserIdByEmail(auth.getName());
     }
 }

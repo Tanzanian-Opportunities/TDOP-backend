@@ -6,11 +6,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tdop.entity.Application;
 import tdop.entity.enums.ApplicationStatus;
+import tdop.entity.enums.NotificationType;
 import tdop.entity.Opportunity;
 import tdop.entity.User;
 import tdop.exception.BadRequestException;
 import tdop.exception.ForbiddenException;
 import tdop.exception.ResourceNotFoundException;
+import tdop.notification.NotificationService;
 import tdop.repository.ApplicationRepository;
 import tdop.repository.OpportunityRepository;
 import tdop.repository.UserRepository;
@@ -18,13 +20,13 @@ import java.util.List;
 
 @Slf4j
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final OpportunityRepository opportunityRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public Application apply(Long oppId, Long applicantId, String coverLetter, String resumeUrl) {
         if (applicationRepository.findByApplicantIdAndOpportunityId(applicantId, oppId).isPresent()) {
@@ -41,8 +43,22 @@ public class ApplicationService {
             .coverLetter(coverLetter)
             .resumeUrl(resumeUrl)
             .build();
+        Application saved = applicationRepository.save(app);
         log.info("Application created: user={} opportunity={}", applicantId, oppId);
-        return applicationRepository.save(app);
+
+        // Notify org owner about new application
+        try {
+            if (opp.getCreatedBy() != null && opp.getCreatedBy().getUser() != null) {
+                Long orgUserId = opp.getCreatedBy().getUser().getId();
+                notificationService.createNotification(orgUserId,
+                    "New Application Received",
+                    applicant.getFullName() + " applied to '" + opp.getTitle() + "'",
+                    NotificationType.APPLICATION);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send new application notification for opportunity id={}: {}", oppId, e.getMessage());
+        }
+        return saved;
     }
 
     public List<Application> getMyApplications(Long userId) {
@@ -56,8 +72,21 @@ public class ApplicationService {
     public Application updateStatus(Long id, ApplicationStatus status) {
         Application app = applicationRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+        ApplicationStatus oldStatus = app.getStatus();
         app.setStatus(status);
-        return applicationRepository.save(app);
+        Application saved = applicationRepository.save(app);
+
+        // Notify applicant of status change
+        try {
+            String statusLabel = status.name().replace("_", " ").toLowerCase();
+            notificationService.createNotification(app.getApplicant().getId(),
+                "Application Status Updated",
+                "Your application to '" + app.getOpportunity().getTitle() + "' is now: " + statusLabel,
+                NotificationType.APPLICATION);
+        } catch (Exception e) {
+            log.warn("Failed to send status update notification for application id={}: {}", id, e.getMessage());
+        }
+        return saved;
     }
 
     public Application withdrawApplication(Long id, Long userId) {

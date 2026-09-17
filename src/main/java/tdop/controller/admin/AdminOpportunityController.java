@@ -8,6 +8,7 @@ import tdop.dto.response.OpportunityResponse;
 import tdop.service.AnalyticsService;
 import tdop.service.ModerationService;
 import tdop.service.OpportunityLifecycleService;
+import tdop.service.UserService;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ public class AdminOpportunityController {
     private final OpportunityLifecycleService opportunityLifecycleService;
     private final ModerationService moderationService;
     private final AnalyticsService analyticsService;
+    private final UserService userService;
 
     @GetMapping
     public ResponseEntity<List<OpportunityResponse>> listPending() {
@@ -70,6 +72,6 @@ public class AdminOpportunityController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userService.getUserIdByEmail(auth.getName());
     }
 }

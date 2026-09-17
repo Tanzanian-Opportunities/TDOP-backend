@@ -10,6 +10,7 @@ import tdop.dto.response.OpportunityResponse;
 import tdop.entity.Application;
 import tdop.service.CandidateService;
 import tdop.service.OpportunityLifecycleService;
+import tdop.service.UserService;
 import java.util.List;
 
 @RestController
@@ -19,6 +20,7 @@ public class OrganizationOpportunityController {
 
     private final OpportunityLifecycleService opportunityLifecycleService;
     private final CandidateService candidateService;
+    private final UserService userService;
 
     @GetMapping
     public ResponseEntity<List<OpportunityResponse>> listByOrg(@RequestParam Long orgId) {
@@ -60,6 +62,12 @@ public class OrganizationOpportunityController {
         return ResponseEntity.ok(opportunityLifecycleService.publish(id, userId));
     }
 
+    @GetMapping("/applications")
+    public ResponseEntity<List<Application>> orgApplications(Authentication auth) {
+        Long userId = getUserId(auth);
+        return ResponseEntity.ok(candidateService.getOrgApplications(userId));
+    }
+
     @GetMapping("/{id}/applicants")
     public ResponseEntity<List<Application>> applicants(@PathVariable Long id, Authentication auth) {
         Long userId = getUserId(auth);
@@ -81,6 +89,6 @@ public class OrganizationOpportunityController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null; // Will be handled by utility
+        return userService.getUserIdByEmail(auth.getName());
     }
 }

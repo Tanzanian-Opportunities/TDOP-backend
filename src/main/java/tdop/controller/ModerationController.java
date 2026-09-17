@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.ModerationAction;
 import tdop.service.ModerationService;
+import tdop.service.UserService;
 import java.util.List;
 
 @RestController
@@ -14,6 +15,7 @@ import java.util.List;
 public class ModerationController {
 
     private final ModerationService moderationService;
+    private final UserService userService;
 
     @GetMapping("/queue")
     public ResponseEntity<?> queue() {
@@ -58,6 +60,6 @@ public class ModerationController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userService.getUserIdByEmail(auth.getName());
     }
 }

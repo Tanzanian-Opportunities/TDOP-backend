@@ -38,6 +38,10 @@ public class CandidateService {
         return applicationRepository.findByOpportunityId(opportunityId);
     }
 
+    public List<Application> getOrgApplications(Long orgUserId) {
+        return applicationRepository.findByOpportunityCreatedByUserId(orgUserId);
+    }
+
     public List<Application> searchApplicants(Long opportunityId, String keyword, Long orgUserId) {
         List<Application> applicants = getApplicantsForOpportunity(opportunityId, orgUserId);
         if (keyword == null || keyword.isBlank()) return applicants;

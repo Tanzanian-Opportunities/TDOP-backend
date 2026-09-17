@@ -18,4 +18,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     long countByOpportunityIdAndShortlisted(Long opportunityId, boolean shortlisted);
     boolean existsByApplicantIdAndOpportunityId(Long applicantId, Long opportunityId);
     Optional<Application> findByApplicantIdAndOpportunityId(Long applicantId, Long opportunityId);
+
+    @Query("SELECT a FROM Application a WHERE a.opportunity.createdBy.user.id = :userId")
+    List<Application> findByOpportunityCreatedByUserId(Long userId);
 }

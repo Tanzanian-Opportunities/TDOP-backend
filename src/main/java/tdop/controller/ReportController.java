@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import tdop.dto.request.ReportRequest;
 import tdop.entity.Report;
 import tdop.service.ReportInvestigationService;
+import tdop.service.UserService;
 import java.util.List;
 
 @RestController
@@ -16,6 +17,7 @@ import java.util.List;
 public class ReportController {
 
     private final ReportInvestigationService reportService;
+    private final UserService userService;
 
     @PostMapping
     public ResponseEntity<Report> create(@Valid @RequestBody ReportRequest request, Authentication auth) {
@@ -32,11 +34,10 @@ public class ReportController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Report> get(@PathVariable Long id) {
-        // Would need a get by ID method
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(reportService.getReportById(id));
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userService.getUserIdByEmail(auth.getName());
     }
 }

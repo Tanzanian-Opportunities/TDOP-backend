@@ -41,6 +41,8 @@ public class RiskSignal {
     @JoinColumn(name = "reviewed_by")
     private User reviewedBy;
 
+    private LocalDateTime reviewedAt;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

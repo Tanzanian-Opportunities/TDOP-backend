@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.service.AntiFraudService;
+import tdop.service.UserService;
 import tdop.entity.RiskSignal;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import java.util.Map;
 public class AdminFraudController {
 
     private final AntiFraudService antiFraudService;
+    private final UserService userService;
 
     @GetMapping("/signals")
     public ResponseEntity<List<RiskSignal>> unreviewedSignals() {
@@ -44,6 +46,6 @@ public class AdminFraudController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userService.getUserIdByEmail(auth.getName());
     }
 }

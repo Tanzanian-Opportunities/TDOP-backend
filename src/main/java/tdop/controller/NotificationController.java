@@ -7,7 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import tdop.notification.NotificationService;
 import tdop.service.UserService;
-import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
@@ -18,22 +18,29 @@ public class NotificationController {
     private final UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<?>> list() {
+    public ResponseEntity<?> list() {
         Long userId = getCurrentUserId();
         return ResponseEntity.ok(notificationService.getNotifications(userId));
     }
 
+    @GetMapping("/unread-count")
+    public ResponseEntity<Map<String, Long>> unreadCount() {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(userId)));
+    }
+
     @PutMapping("/{id}/read")
     public ResponseEntity<String> markRead(@PathVariable Long id) {
-        notificationService.markAsRead(id);
+        Long userId = getCurrentUserId();
+        notificationService.markAsRead(id, userId);
         return ResponseEntity.ok("Marked as read");
     }
 
     @PostMapping("/read-all")
-    public ResponseEntity<String> markAllRead() {
+    public ResponseEntity<?> markAllRead() {
         Long userId = getCurrentUserId();
-        notificationService.markAllAsRead(userId);
-        return ResponseEntity.ok("All notifications marked as read");
+        int updated = notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(Map.of("updated", updated));
     }
 
     private Long getCurrentUserId() {

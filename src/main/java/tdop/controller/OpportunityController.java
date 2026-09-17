@@ -26,6 +26,11 @@ public class OpportunityController {
         return ResponseEntity.ok(opportunityService.searchOpportunities(keyword));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<OpportunityResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(opportunityService.getOpportunity(id));
+    }
+
     @GetMapping("/filter/{category}")
     public ResponseEntity<List<OpportunityResponse>> filter(@PathVariable String category) {
         return ResponseEntity.ok(opportunityService.filterByCategory(category));
