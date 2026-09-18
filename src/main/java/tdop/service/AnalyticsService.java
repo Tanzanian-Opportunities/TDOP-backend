@@ -77,9 +77,10 @@ public class AnalyticsService {
 
     public Map<String, Object> getPlatformActivity() {
         Map<String, Object> activity = new HashMap<>();
-        activity.put("newUsersLast7Days", userRepository.count());
-        activity.put("newOpportunitiesLast7Days", opportunityRepository.count());
-        activity.put("newApplicationsLast7Days", applicationRepository.count());
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+        activity.put("newUsersLast7Days", userRepository.countCreatedSince(sevenDaysAgo));
+        activity.put("newOpportunitiesLast7Days", opportunityRepository.countCreatedSince(sevenDaysAgo));
+        activity.put("newApplicationsLast7Days", applicationRepository.countCreatedSince(sevenDaysAgo));
         return activity;
     }
 }
