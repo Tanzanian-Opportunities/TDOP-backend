@@ -3,10 +3,17 @@ package tdop.controller.trust;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import tdop.entity.VerificationDocument;
+import tdop.entity.ModerationAction;
+import tdop.entity.Report;
+import tdop.entity.User;
+import tdop.repository.UserRepository;
 import tdop.service.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,6 +27,7 @@ public class TrustDashboardController {
     private final ReportInvestigationService reportService;
     private final AntiFraudService antiFraudService;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     @GetMapping("/attention")
     public ResponseEntity<Map<String, Object>> attentionCenter() {
@@ -65,5 +73,37 @@ public class TrustDashboardController {
             queue.put("fraudSignals", antiFraudService.getUnreviewedSignals());
         }
         return ResponseEntity.ok(queue);
+    }
+
+    @GetMapping("/verification/{id}/documents")
+    public ResponseEntity<List<VerificationDocument>> verificationDocuments(@PathVariable Long id) {
+        return ResponseEntity.ok(verificationService.getDocuments(id));
+    }
+
+    @GetMapping("/verification/{id}")
+    public ResponseEntity<?> verificationDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(verificationService.getRequestById(id));
+    }
+
+    @GetMapping("/moderation/{id}/history")
+    public ResponseEntity<List<ModerationAction>> moderationHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(moderationService.getHistory(id));
+    }
+
+    @PostMapping("/reports/{id}/assign")
+    public ResponseEntity<Report> assignReport(@PathVariable Long id,
+                                                @RequestParam Long investigatorId) {
+        return ResponseEntity.ok(reportService.assignToInvestigator(id, investigatorId));
+    }
+
+    @PostMapping("/reports/{id}/add-notes")
+    public ResponseEntity<Report> addReportNotes(@PathVariable Long id,
+                                                  @RequestParam String notes) {
+        return ResponseEntity.ok(reportService.addInvestigationNotes(id, notes));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getTrustOfficers() {
+        return ResponseEntity.ok(userRepository.findAll());
     }
 }
