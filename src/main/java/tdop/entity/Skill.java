@@ -2,6 +2,7 @@ package tdop.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import tdop.entity.enums.SkillLevel;
 
 @Entity
@@ -21,10 +22,12 @@ public class Skill {
     @Enumerated(EnumType.STRING)
     private SkillLevel level;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seeker_profile_id")
     private SeekerProfile seekerProfile;

@@ -11,6 +11,7 @@ import tdop.entity.Application;
 import tdop.service.CandidateService;
 import tdop.service.OpportunityLifecycleService;
 import tdop.service.UserService;
+import tdop.organization.OrganizationService;
 import java.util.List;
 
 @RestController
@@ -21,9 +22,11 @@ public class OrganizationOpportunityController {
     private final OpportunityLifecycleService opportunityLifecycleService;
     private final CandidateService candidateService;
     private final UserService userService;
+    private final OrganizationService organizationService;
 
     @GetMapping
-    public ResponseEntity<List<OpportunityResponse>> listByOrg(@RequestParam Long orgId) {
+    public ResponseEntity<List<OpportunityResponse>> listByOrg(@RequestParam Long orgId, Authentication auth) {
+        Long userId = getUserId(auth);
         return ResponseEntity.ok(opportunityLifecycleService.getOpportunitiesByOrg(orgId));
     }
 
@@ -32,6 +35,7 @@ public class OrganizationOpportunityController {
                                                        @RequestParam Long orgId,
                                                        Authentication auth) {
         Long userId = getUserId(auth);
+        organizationService.assertOrganizationOwnerOrAdmin(organizationService.getProfile(orgId), userId);
         return ResponseEntity.ok(opportunityLifecycleService.createDraft(request, orgId));
     }
 

@@ -185,6 +185,7 @@ public class OpportunityLifecycleService {
         if (request.getExperienceLevel() != null) opp.setExperienceLevel(request.getExperienceLevel());
         if (request.getFundingInfo() != null) opp.setFundingInfo(request.getFundingInfo());
         if (request.getEligibility() != null) opp.setEligibility(request.getEligibility());
+        if (request.getRequiredDocuments() != null) opp.setRequiredDocuments(request.getRequiredDocuments());
         return toResponse(opportunityRepository.save(opp));
     }
 
@@ -214,7 +215,7 @@ public class OpportunityLifecycleService {
         statusHistoryRepository.save(history);
     }
 
-    public OpportunityResponse toResponse(Opportunity opp) {
+    public OpportunityResponse toResponse(Oppopp opp) {
         return OpportunityResponse.builder()
             .id(opp.getId())
             .title(opp.getTitle())
@@ -227,11 +228,27 @@ public class OpportunityLifecycleService {
             .deadline(opp.getDeadline())
             .tags(opp.getTags())
             .createdAt(opp.getCreatedAt())
+            .updatedAt(opp.getUpdatedAt())
             .sourceUrl(opp.getSourceUrl())
             .applicationUrl(opp.getApplicationUrl())
             .workMode(opp.getWorkMode())
             .educationLevel(opp.getEducationLevel())
             .experienceLevel(opp.getExperienceLevel())
+            .fundingInfo(opp.getFundingInfo())
+            .requirements(opp.getRequirements())
+            .benefits(opp.getBenefits())
+            .eligibility(opp.getEligibility())
+            .requiredDocuments(opp.getRequiredDocuments())
+            .verified(opp.isVerified())
+            .verifiedAt(opp.getVerifiedAt())
+            .moderated(opp.isModerated())
+            .moderatedAt(opp.getModeratedAt())
+            .publishedAt(opp.getPublishedAt())
+            .viewCount(opp.getViewCount())
+            .saveCount(opp.getSaveCount())
+            .applicationCount(opp.getApplicationCount())
+            .organizationName(opp.getCreatedBy() != null ? opp.getCreatedBy().getOrgName() : null)
+            .organizationId(opp.getCreatedBy() != null ? opp.getCreatedBy().getId() : null)
             .build();
     }
 }

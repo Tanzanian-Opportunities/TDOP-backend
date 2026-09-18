@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import tdop.entity.enums.OpportunityStatus;
 import tdop.entity.enums.OpportunityType;
 import java.time.LocalDateTime;
@@ -48,6 +49,7 @@ public class Opportunity {
     @Enumerated(EnumType.STRING)
     private OpportunityStatus status = OpportunityStatus.DRAFT;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private OrganizationProfile createdBy;
@@ -58,6 +60,7 @@ public class Opportunity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "opportunity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Application> applications = new ArrayList<>();
 
@@ -95,6 +98,7 @@ public class Opportunity {
     private Long saveCount = 0L;
     private Long applicationCount = 0L;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "opportunity", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OpportunityStatusHistory> statusHistory = new ArrayList<>();
 }

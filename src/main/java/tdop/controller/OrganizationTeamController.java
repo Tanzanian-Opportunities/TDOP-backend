@@ -20,7 +20,9 @@ public class OrganizationTeamController {
     private final UserService userService;
 
     @GetMapping("/{orgId}/members")
-    public ResponseEntity<List<OrganizationMember>> members(@PathVariable Long orgId) {
+    public ResponseEntity<List<OrganizationMember>> members(@PathVariable Long orgId, Authentication auth) {
+        Long userId = getUserId(auth);
+        organizationService.assertOrganizationOwnerOrAdmin(organizationService.getProfile(orgId), userId);
         return ResponseEntity.ok(organizationService.getMembers(orgId));
     }
 
@@ -59,7 +61,9 @@ public class OrganizationTeamController {
     }
 
     @GetMapping("/{orgId}/invitations")
-    public ResponseEntity<List<OrganizationInvitation>> invitations(@PathVariable Long orgId) {
+    public ResponseEntity<List<OrganizationInvitation>> invitations(@PathVariable Long orgId, Authentication auth) {
+        Long userId = getUserId(auth);
+        organizationService.assertOrganizationOwnerOrAdmin(organizationService.getProfile(orgId), userId);
         return ResponseEntity.ok(organizationService.getPendingInvitations(orgId));
     }
 

@@ -17,6 +17,7 @@ public class OpportunityResponse {
     private LocalDateTime deadline;
     private String tags;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     // Extended fields
     private String sourceUrl;
@@ -25,9 +26,18 @@ public class OpportunityResponse {
     private String educationLevel;
     private String experienceLevel;
     private String fundingInfo;
+    private String requirements;
+    private String benefits;
+    private String eligibility;
+    private String requiredDocuments;
     private boolean verified;
+    private LocalDateTime verifiedAt;
     private boolean moderated;
+    private LocalDateTime moderatedAt;
+    private LocalDateTime publishedAt;
     private Long viewCount;
     private Long saveCount;
     private Long applicationCount;
+    private String organizationName;
+    private Long organizationId;
 }
