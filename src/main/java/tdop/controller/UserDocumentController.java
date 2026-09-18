@@ -1,11 +1,16 @@
 package tdop.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import tdop.entity.UserDocument;
+import tdop.service.FileStorageService;
 import tdop.service.UserDocumentService;
 import tdop.service.UserService;
 import java.util.Map;
@@ -16,6 +21,7 @@ import java.util.Map;
 public class UserDocumentController {
 
     private final UserDocumentService userDocumentService;
+    private final FileStorageService fileStorageService;
     private final UserService userService;
 
     @GetMapping
@@ -37,19 +43,23 @@ public class UserDocumentController {
             @RequestParam(value = "documentType", defaultValue = "other") String documentType,
             @RequestParam(value = "description", defaultValue = "") String description) {
         Long userId = getCurrentUserId();
-
-        String fileName = "";
-        String fileType = "";
-        long fileSize = 0;
-
-        if (file != null && !file.isEmpty()) {
-            fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "";
-            fileType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-            fileSize = file.getSize();
-        }
-
-        var doc = userDocumentService.uploadDocument(userId, name, fileName, fileType, fileSize, documentType, description);
+        var doc = userDocumentService.uploadDocument(userId, name, file, documentType, description);
         return ResponseEntity.ok(doc);
+    }
+
+    @GetMapping("/{id}/download")
+    public ResponseEntity<ByteArrayResource> downloadDocument(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        UserDocument doc = userDocumentService.getDocument(userId, id);
+        if (doc.getFilePath() == null || doc.getFilePath().isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] fileBytes = fileStorageService.loadFile("documents/" + userId, doc.getFilePath());
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + doc.getFileName() + "\"")
+            .contentType(MediaType.parseMediaType(doc.getFileType()))
+            .contentLength(fileBytes.length)
+            .body(new ByteArrayResource(fileBytes));
     }
 
     @PutMapping("/{id}")

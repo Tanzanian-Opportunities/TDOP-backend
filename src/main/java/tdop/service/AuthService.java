@@ -8,6 +8,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import tdop.audit.AuditLogService;
 import tdop.config.JwtUtil;
 import tdop.dto.request.LoginRequest;
 import tdop.dto.request.RegisterRequest;
@@ -17,6 +18,7 @@ import tdop.entity.User;
 import tdop.entity.enums.UserRole;
 import tdop.exception.BadRequestException;
 import tdop.exception.ResourceNotFoundException;
+import tdop.notification.email.EmailService;
 import tdop.repository.UserRepository;
 
 import java.util.Set;
@@ -33,6 +35,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final AuditLogService auditLogService;
+    private final EmailService emailService;
 
     private final Set<String> revokedTokens = ConcurrentHashMap.newKeySet();
     private final java.util.Map<String, String> passwordResetTokens = new ConcurrentHashMap<>();
@@ -51,6 +55,7 @@ public class AuthService {
         }
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+        auditLogService.logAction("LOGIN", "User", user.getId(), user.getId());
         return AuthResponse.builder().token(token).refreshToken(refreshToken)
             .email(user.getEmail()).fullName(user.getFullName())
             .role(user.getRole().name()).build();
@@ -66,6 +71,15 @@ public class AuthService {
             .fullName(request.getFullName()).phone(request.getPhone())
             .role(role).enabled(true).verified(false).build();
         userRepository.save(user);
+        auditLogService.logAction("REGISTER", "User", user.getId(), user.getId());
+
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), user.getFullName(),
+                "http://localhost:3000/verify?token=" + UUID.randomUUID());
+        } catch (Exception e) {
+            log.warn("Could not send verification email to {}: {}", user.getEmail(), e.getMessage());
+        }
+
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         return AuthResponse.builder().token(token).refreshToken(refreshToken)
@@ -85,6 +99,7 @@ public class AuthService {
 
     public void logout(String token) {
         revokedTokens.add(token);
+        auditLogService.logAction("LOGOUT", "User", null, null);
         log.info("Token revoked for logout");
     }
 
@@ -110,6 +125,7 @@ public class AuthService {
         userRepository.findByEmail(email).ifPresent(user -> {
             String resetToken = UUID.randomUUID().toString();
             passwordResetTokens.put(resetToken, email);
+            auditLogService.logAction("FORGOT_PASSWORD", "User", user.getId(), user.getId());
             log.info("Password reset token for {}: {}", email, resetToken);
         });
     }
@@ -123,5 +139,6 @@ public class AuthService {
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        auditLogService.logAction("RESET_PASSWORD", "User", user.getId(), user.getId());
     }
 }

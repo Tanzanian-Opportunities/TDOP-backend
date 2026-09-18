@@ -3,6 +3,7 @@ package tdop.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import tdop.entity.UserDocument;
 import tdop.repository.UserDocumentRepository;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 public class UserDocumentService {
 
     private final UserDocumentRepository userDocumentRepository;
+    private final FileStorageService fileStorageService;
 
     public List<UserDocument> getUserDocuments(Long userId) {
         return userDocumentRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -31,7 +33,19 @@ public class UserDocumentService {
         return doc;
     }
 
-    public UserDocument uploadDocument(Long userId, String name, String fileName, String fileType, Long fileSize, String documentType, String description) {
+    public UserDocument uploadDocument(Long userId, String name, MultipartFile file, String documentType, String description) {
+        String storedFilename = null;
+        String fileName = "";
+        String fileType = "";
+        long fileSize = 0;
+
+        if (file != null && !file.isEmpty()) {
+            storedFilename = fileStorageService.storeFile(file, "documents/" + userId);
+            fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "";
+            fileType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+            fileSize = file.getSize();
+        }
+
         UserDocument doc = UserDocument.builder()
             .user(tdop.entity.User.builder().id(userId).build())
             .name(name)
@@ -40,6 +54,7 @@ public class UserDocumentService {
             .fileSize(fileSize)
             .documentType(documentType)
             .description(description)
+            .filePath(storedFilename)
             .build();
         return userDocumentRepository.save(doc);
     }
@@ -53,6 +68,9 @@ public class UserDocumentService {
 
     public void deleteDocument(Long userId, Long documentId) {
         UserDocument doc = getDocument(userId, documentId);
+        if (doc.getFilePath() != null && !doc.getFilePath().isEmpty()) {
+            fileStorageService.deleteFile("documents/" + userId, doc.getFilePath());
+        }
         userDocumentRepository.delete(doc);
     }
 

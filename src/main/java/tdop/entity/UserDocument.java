@@ -38,6 +38,8 @@ public class UserDocument {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    private String filePath;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

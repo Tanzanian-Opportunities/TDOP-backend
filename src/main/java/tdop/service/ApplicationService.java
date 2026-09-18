@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tdop.audit.AuditLogService;
 import tdop.entity.Application;
 import tdop.entity.enums.ApplicationStatus;
 import tdop.entity.enums.NotificationType;
@@ -13,6 +14,7 @@ import tdop.exception.BadRequestException;
 import tdop.exception.ForbiddenException;
 import tdop.exception.ResourceNotFoundException;
 import tdop.notification.NotificationService;
+import tdop.notification.email.EmailService;
 import tdop.repository.ApplicationRepository;
 import tdop.repository.OpportunityRepository;
 import tdop.repository.UserRepository;
@@ -27,6 +29,8 @@ public class ApplicationService {
     private final OpportunityRepository opportunityRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final AuditLogService auditLogService;
+    private final EmailService emailService;
 
     public Application apply(Long oppId, Long applicantId, String coverLetter, String resumeUrl) {
         if (applicationRepository.findByApplicantIdAndOpportunityId(applicantId, oppId).isPresent()) {
@@ -46,6 +50,12 @@ public class ApplicationService {
         Application saved = applicationRepository.save(app);
         log.info("Application created: user={} opportunity={}", applicantId, oppId);
 
+        opp.setApplicationCount(opp.getApplicationCount() + 1);
+        opportunityRepository.save(opp);
+
+        auditLogService.logAction("APPLY", "Application", saved.getId(), applicantId,
+            null, opp.getTitle(), null);
+
         // Notify org owner about new application
         try {
             if (opp.getCreatedBy() != null && opp.getCreatedBy().getUser() != null) {
@@ -58,6 +68,18 @@ public class ApplicationService {
         } catch (Exception e) {
             log.warn("Failed to send new application notification for opportunity id={}: {}", oppId, e.getMessage());
         }
+
+        if (opp.getCreatedBy() != null && opp.getCreatedBy().getUser() != null) {
+            try {
+                emailService.sendApplicationNotification(
+                    opp.getCreatedBy().getUser().getEmail(),
+                    opp.getTitle(),
+                    applicant.getFullName());
+            } catch (Exception e) {
+                log.warn("Could not send application notification email: {}", e.getMessage());
+            }
+        }
+
         return saved;
     }
 
@@ -76,6 +98,9 @@ public class ApplicationService {
         app.setStatus(status);
         Application saved = applicationRepository.save(app);
 
+        auditLogService.logAction("UPDATE_APPLICATION_STATUS", "Application", id,
+            app.getApplicant().getId(), oldStatus.name(), status.name(), null);
+
         // Notify applicant of status change
         try {
             String statusLabel = status.name().replace("_", " ").toLowerCase();
@@ -86,6 +111,8 @@ public class ApplicationService {
         } catch (Exception e) {
             log.warn("Failed to send status update notification for application id={}: {}", id, e.getMessage());
         }
+
+        log.info("Application status updated: id={} {} -> {}", id, oldStatus, status);
         return saved;
     }
 
@@ -98,8 +125,14 @@ public class ApplicationService {
         if (app.getStatus() == ApplicationStatus.REJECTED || app.getStatus() == ApplicationStatus.ACCEPTED || app.getStatus() == ApplicationStatus.WITHDRAWN) {
             throw new BadRequestException("Cannot withdraw an application with status: " + app.getStatus());
         }
+        ApplicationStatus oldStatus = app.getStatus();
         app.setStatus(ApplicationStatus.WITHDRAWN);
+        Application saved = applicationRepository.save(app);
+
+        auditLogService.logAction("WITHDRAW_APPLICATION", "Application", id, userId,
+            oldStatus.name(), "WITHDRAWN", null);
+
         log.info("Application withdrawn: id={} user={}", id, userId);
-        return applicationRepository.save(app);
+        return saved;
     }
 }
