@@ -2,9 +2,11 @@ package tdop.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import tdop.entity.Application;
 import tdop.entity.enums.ApplicationStatus;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,4 +23,7 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     @Query("SELECT a FROM Application a WHERE a.opportunity.createdBy.user.id = :userId")
     List<Application> findByOpportunityCreatedByUserId(Long userId);
+
+    @Query("SELECT COUNT(a) FROM Application a WHERE a.appliedAt >= :since")
+    long countCreatedSince(@Param("since") LocalDateTime since);
 }
