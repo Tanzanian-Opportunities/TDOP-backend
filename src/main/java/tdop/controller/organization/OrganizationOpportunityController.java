@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import tdop.dto.request.OpportunityRequest;
 import tdop.dto.response.OpportunityResponse;
 import tdop.entity.Application;
+import tdop.repository.UserRepository;
 import tdop.service.CandidateService;
 import tdop.service.OpportunityLifecycleService;
 import java.util.List;
@@ -19,6 +20,7 @@ public class OrganizationOpportunityController {
 
     private final OpportunityLifecycleService opportunityLifecycleService;
     private final CandidateService candidateService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<OpportunityResponse>> listByOrg(@RequestParam Long orgId) {
@@ -81,6 +83,6 @@ public class OrganizationOpportunityController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null; // Will be handled by utility
+        return userRepository.findByEmail(auth.getName()).map(u -> u.getId()).orElse(null);
     }
 }

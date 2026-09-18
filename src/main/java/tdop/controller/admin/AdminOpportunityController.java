@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.dto.response.OpportunityResponse;
+import tdop.repository.UserRepository;
 import tdop.service.AnalyticsService;
 import tdop.service.ModerationService;
 import tdop.service.OpportunityLifecycleService;
@@ -19,6 +20,7 @@ public class AdminOpportunityController {
     private final OpportunityLifecycleService opportunityLifecycleService;
     private final ModerationService moderationService;
     private final AnalyticsService analyticsService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<OpportunityResponse>> listPending() {
@@ -70,6 +72,6 @@ public class AdminOpportunityController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userRepository.findByEmail(auth.getName()).map(u -> u.getId()).orElse(null);
     }
 }

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import tdop.repository.UserRepository;
 import tdop.service.AntiFraudService;
 import tdop.entity.RiskSignal;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Map;
 public class AdminFraudController {
 
     private final AntiFraudService antiFraudService;
+    private final UserRepository userRepository;
 
     @GetMapping("/signals")
     public ResponseEntity<List<RiskSignal>> unreviewedSignals() {
@@ -44,6 +46,6 @@ public class AdminFraudController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userRepository.findByEmail(auth.getName()).map(u -> u.getId()).orElse(null);
     }
 }

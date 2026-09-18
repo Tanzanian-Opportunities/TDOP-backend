@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.PlatformConfig;
+import tdop.repository.UserRepository;
 import tdop.service.PlatformConfigService;
 import java.util.List;
 
@@ -14,6 +15,7 @@ import java.util.List;
 public class PlatformConfigController {
 
     private final PlatformConfigService configService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<PlatformConfig>> getAll() {
@@ -41,6 +43,6 @@ public class PlatformConfigController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userRepository.findByEmail(auth.getName()).map(u -> u.getId()).orElse(null);
     }
 }

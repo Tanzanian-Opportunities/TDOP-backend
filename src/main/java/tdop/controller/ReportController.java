@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.dto.request.ReportRequest;
 import tdop.entity.Report;
+import tdop.repository.UserRepository;
 import tdop.service.ReportInvestigationService;
 import java.util.List;
 
@@ -16,6 +17,7 @@ import java.util.List;
 public class ReportController {
 
     private final ReportInvestigationService reportService;
+    private final UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<Report> create(@Valid @RequestBody ReportRequest request, Authentication auth) {
@@ -37,6 +39,6 @@ public class ReportController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userRepository.findByEmail(auth.getName()).map(u -> u.getId()).orElse(null);
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.ModerationAction;
+import tdop.repository.UserRepository;
 import tdop.service.ModerationService;
 import java.util.List;
 
@@ -14,6 +15,7 @@ import java.util.List;
 public class ModerationController {
 
     private final ModerationService moderationService;
+    private final UserRepository userRepository;
 
     @GetMapping("/queue")
     public ResponseEntity<?> queue() {
@@ -58,6 +60,6 @@ public class ModerationController {
     }
 
     private Long getUserId(Authentication auth) {
-        return null;
+        return userRepository.findByEmail(auth.getName()).map(u -> u.getId()).orElse(null);
     }
 }

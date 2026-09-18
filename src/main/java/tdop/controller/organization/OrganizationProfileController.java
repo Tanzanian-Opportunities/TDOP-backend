@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.OrganizationProfile;
 import tdop.organization.OrganizationService;
+import tdop.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/v1/organization/profile")
@@ -14,6 +15,7 @@ import tdop.organization.OrganizationService;
 public class OrganizationProfileController {
 
     private final OrganizationService organizationService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<OrganizationProfile> view(Authentication auth) {
@@ -40,8 +42,6 @@ public class OrganizationProfileController {
     }
 
     private Long getUserId(Authentication auth) {
-        // Extract user ID from authentication principal
-        // This is a simplified approach - in production, extract from JWT or lookup by email
-        return null; // Will be handled by a utility method
+        return userRepository.findByEmail(auth.getName()).map(u -> u.getId()).orElse(null);
     }
 }
