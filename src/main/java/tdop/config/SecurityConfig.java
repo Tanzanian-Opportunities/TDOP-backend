@@ -55,6 +55,9 @@ public class SecurityConfig {
                 // Moderation endpoints
                 .requestMatchers("/api/v1/moderation/**").hasAnyRole("MODERATOR", "ADMIN", "SUPER_ADMIN")
 
+                // Trust workspace endpoints (combined VO + Moderator)
+                .requestMatchers("/api/v1/trust/**").hasAnyRole("VERIFICATION_OFFICER", "MODERATOR", "ADMIN", "SUPER_ADMIN")
+
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )
