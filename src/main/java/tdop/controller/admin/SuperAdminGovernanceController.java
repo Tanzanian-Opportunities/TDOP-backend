@@ -3,14 +3,10 @@ package tdop.controller.admin;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.enums.UserRole;
 import tdop.repository.*;
 import tdop.service.AnalyticsService;
-import tdop.service.AuditLogService;
-import tdop.service.AntiFraudService;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -73,12 +69,12 @@ public class SuperAdminGovernanceController {
         Map<String, Object> pulse = new HashMap<>();
         pulse.put("users", Map.of(
             "total", userRepository.count(),
-            "admins", countByRole("ADMIN"),
-            "superAdmins", countByRole("SUPER_ADMIN"),
-            "organizations", countByRole("ORGANIZATION"),
-            "seekers", countByRole("SEEKER"),
-            "verificationOfficers", countByRole("VERIFICATION_OFFICER"),
-            "moderators", countByRole("MODERATOR")
+            "admins", countByRole(UserRole.ADMIN),
+            "superAdmins", countByRole(UserRole.SUPER_ADMIN),
+            "organizations", countByRole(UserRole.ORGANIZATION),
+            "seekers", countByRole(UserRole.SEEKER),
+            "verificationOfficers", countByRole(UserRole.VERIFICATION_OFFICER),
+            "moderators", countByRole(UserRole.MODERATOR)
         ));
         pulse.put("organizations", Map.of(
             "total", orgProfileRepository.count(),
