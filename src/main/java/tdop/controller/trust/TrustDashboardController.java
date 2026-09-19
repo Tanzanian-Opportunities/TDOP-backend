@@ -11,6 +11,7 @@ import tdop.entity.Report;
 import tdop.entity.User;
 import tdop.repository.UserRepository;
 import tdop.service.*;
+import tdop.audit.AuditLogService;
 
 import java.util.HashMap;
 import java.util.List;

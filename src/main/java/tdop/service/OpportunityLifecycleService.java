@@ -215,7 +215,7 @@ public class OpportunityLifecycleService {
         statusHistoryRepository.save(history);
     }
 
-    public OpportunityResponse toResponse(Oppopp opp) {
+    public OpportunityResponse toResponse(Opportunity opp) {
         return OpportunityResponse.builder()
             .id(opp.getId())
             .title(opp.getTitle())
