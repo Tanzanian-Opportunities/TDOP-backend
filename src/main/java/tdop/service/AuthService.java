@@ -21,9 +21,11 @@ import tdop.exception.ResourceNotFoundException;
 import tdop.notification.email.EmailService;
 import tdop.repository.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
@@ -40,15 +42,29 @@ public class AuthService {
 
     private final Set<String> revokedTokens = ConcurrentHashMap.newKeySet();
     private final java.util.Map<String, String> passwordResetTokens = new ConcurrentHashMap<>();
+    private final java.util.Map<String, LocalDateTime> passwordResetExpiry = new ConcurrentHashMap<>();
+    private final java.util.Map<String, String> emailVerificationTokens = new ConcurrentHashMap<>();
+    private final java.util.Map<String, LocalDateTime> emailVerificationExpiry = new ConcurrentHashMap<>();
+    private final java.util.Map<String, AtomicInteger> loginAttempts = new ConcurrentHashMap<>();
+    private final java.util.Map<String, LocalDateTime> accountLockouts = new ConcurrentHashMap<>();
+
+    private static final int MAX_LOGIN_ATTEMPTS = 5;
+    private static final int LOCKOUT_MINUTES = 15;
+    private static final int PASSWORD_RESET_EXPIRY_MINUTES = 30;
+    private static final int EMAIL_VERIFICATION_EXPIRY_MINUTES = 60;
 
     public AuthResponse login(LoginRequest request) {
+        String email = request.getEmail();
+        checkAccountLockout(email);
         try {
             authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
         } catch (BadCredentialsException e) {
+            recordFailedLogin(email);
             throw new BadRequestException("Invalid credentials");
         }
-        User user = userRepository.findByEmail(request.getEmail())
+        clearLoginAttempts(email);
+        User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new BadRequestException("User not found"));
         if (!user.isEnabled()) {
             throw new BadRequestException("Account is disabled");
@@ -73,9 +89,12 @@ public class AuthService {
         userRepository.save(user);
         auditLogService.logAction("REGISTER", "User", user.getId(), user.getId());
 
+        String verificationToken = UUID.randomUUID().toString();
+        emailVerificationTokens.put(verificationToken, user.getEmail());
+        emailVerificationExpiry.put(verificationToken, LocalDateTime.now().plusMinutes(EMAIL_VERIFICATION_EXPIRY_MINUTES));
         try {
-            emailService.sendVerificationEmail(user.getEmail(), user.getFullName(),
-                "http://localhost:3000/verify?token=" + UUID.randomUUID());
+            String verifyUrl = System.getenv("FRONTEND_URL") + "/verify?token=" + verificationToken;
+            emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verifyUrl);
         } catch (Exception e) {
             log.warn("Could not send verification email to {}: {}", user.getEmail(), e.getMessage());
         }
@@ -125,13 +144,21 @@ public class AuthService {
         userRepository.findByEmail(email).ifPresent(user -> {
             String resetToken = UUID.randomUUID().toString();
             passwordResetTokens.put(resetToken, email);
+            passwordResetExpiry.put(resetToken, LocalDateTime.now().plusMinutes(PASSWORD_RESET_EXPIRY_MINUTES));
             auditLogService.logAction("FORGOT_PASSWORD", "User", user.getId(), user.getId());
-            log.info("Password reset token for {}: {}", email, resetToken);
+            log.info("Password reset token generated for {}", email);
         });
     }
 
     public void resetPassword(String token, String newPassword) {
+        LocalDateTime expiry = passwordResetExpiry.get(token);
+        if (expiry == null || LocalDateTime.now().isAfter(expiry)) {
+            passwordResetTokens.remove(token);
+            passwordResetExpiry.remove(token);
+            throw new BadRequestException("Invalid or expired reset token");
+        }
         String email = passwordResetTokens.remove(token);
+        passwordResetExpiry.remove(token);
         if (email == null) {
             throw new BadRequestException("Invalid or expired reset token");
         }
@@ -140,5 +167,47 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         auditLogService.logAction("RESET_PASSWORD", "User", user.getId(), user.getId());
+    }
+
+    public boolean verifyEmail(String token) {
+        LocalDateTime expiry = emailVerificationExpiry.get(token);
+        if (expiry == null || LocalDateTime.now().isAfter(expiry)) {
+            emailVerificationTokens.remove(token);
+            emailVerificationExpiry.remove(token);
+            return false;
+        }
+        String email = emailVerificationTokens.remove(token);
+        emailVerificationExpiry.remove(token);
+        if (email == null) return false;
+        userRepository.findByEmail(email).ifPresent(user -> {
+            user.setVerified(true);
+            userRepository.save(user);
+        });
+        return true;
+    }
+
+    private void checkAccountLockout(String email) {
+        LocalDateTime lockout = accountLockouts.get(email);
+        if (lockout != null && LocalDateTime.now().isBefore(lockout)) {
+            throw new BadRequestException("Account is locked due to too many failed attempts. Try again later.");
+        }
+        if (lockout != null && LocalDateTime.now().isAfter(lockout)) {
+            accountLockouts.remove(email);
+            loginAttempts.remove(email);
+        }
+    }
+
+    private void recordFailedLogin(String email) {
+        AtomicInteger attempts = loginAttempts.computeIfAbsent(email, k -> new AtomicInteger(0));
+        int count = attempts.incrementAndGet();
+        if (count >= MAX_LOGIN_ATTEMPTS) {
+            accountLockouts.put(email, LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES));
+            log.warn("Account locked for {} after {} failed attempts", email, count);
+        }
+    }
+
+    private void clearLoginAttempts(String email) {
+        loginAttempts.remove(email);
+        accountLockouts.remove(email);
     }
 }

@@ -3,6 +3,7 @@ package tdop.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +36,7 @@ public class ApplicationController {
         return ResponseEntity.ok(applicationService.getMyApplications(userId));
     }
 
+    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ORGANIZATION_OWNER', 'ADMIN', 'SUPER_ADMIN')")
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
                                           @RequestParam ApplicationStatus status) {
