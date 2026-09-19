@@ -80,6 +80,7 @@ public class ApplicationService {
         Application app = applicationRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
         ApplicationStatus oldStatus = app.getStatus();
+        LifecycleValidator.validateApplicationTransition(oldStatus, status);
         app.setStatus(status);
         Application saved = applicationRepository.save(app);
 

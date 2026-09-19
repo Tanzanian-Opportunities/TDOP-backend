@@ -58,6 +58,7 @@ public class ReportInvestigationService {
             .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
         User investigator = userRepository.findById(investigatorId)
             .orElseThrow(() -> new ResourceNotFoundException("Investigator not found"));
+        LifecycleValidator.validateReportTransition(report.getStatus(), ReportStatus.REVIEWED);
         report.setAssignedTo(investigator);
         report.setStatus(ReportStatus.REVIEWED);
         return reportRepository.save(report);
@@ -74,6 +75,7 @@ public class ReportInvestigationService {
     public Report resolveReport(Long reportId, String resolution) {
         Report report = reportRepository.findById(reportId)
             .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
+        LifecycleValidator.validateReportTransition(report.getStatus(), ReportStatus.ACTIONED);
         report.setStatus(ReportStatus.ACTIONED);
         report.setResolution(resolution);
         report.setActionedAt(LocalDateTime.now());
@@ -83,6 +85,7 @@ public class ReportInvestigationService {
     public Report dismissReport(Long reportId) {
         Report report = reportRepository.findById(reportId)
             .orElseThrow(() -> new ResourceNotFoundException("Report not found"));
+        LifecycleValidator.validateReportTransition(report.getStatus(), ReportStatus.ACTIONED);
         report.setStatus(ReportStatus.ACTIONED);
         report.setResolution("No action required");
         report.setActionedAt(LocalDateTime.now());

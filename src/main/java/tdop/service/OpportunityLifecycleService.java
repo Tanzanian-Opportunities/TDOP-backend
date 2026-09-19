@@ -196,6 +196,7 @@ public class OpportunityLifecycleService {
 
     private void transitionStatus(Opportunity opp, OpportunityStatus newStatus, String reason) {
         OpportunityStatus oldStatus = opp.getStatus();
+        LifecycleValidator.validateOpportunityTransition(oldStatus, newStatus);
         opp.setStatus(newStatus);
         OpportunityStatusHistory history = OpportunityStatusHistory.builder()
             .opportunity(opp)
