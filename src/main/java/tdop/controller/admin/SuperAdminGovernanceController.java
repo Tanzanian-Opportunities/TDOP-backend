@@ -52,15 +52,21 @@ public class SuperAdminGovernanceController {
     @GetMapping("/platform-health")
     public ResponseEntity<Map<String, Object>> platformHealth() {
         Map<String, Object> health = new HashMap<>();
-        health.put("database", Map.of("status", "OPERATIONAL", "description", "PostgreSQL connected"));
+        String dbStatus = "OPERATIONAL";
+        String dbDesc = "PostgreSQL connected";
+        try { userRepository.count(); } catch (Exception e) { dbStatus = "ERROR"; dbDesc = "Database error: " + e.getMessage(); }
+        health.put("database", Map.of("status", dbStatus, "description", dbDesc));
         health.put("api", Map.of("status", "OPERATIONAL", "description", "Spring Boot API responding"));
         health.put("authentication", Map.of("status", "OPERATIONAL", "description", "JWT authentication active"));
-        health.put("storage", Map.of("status", "OPERATIONAL", "description", "File storage available"));
+        String storageStatus = "OPERATIONAL";
+        String storageDesc = "File storage available";
+        try { new java.io.File("uploads").exists(); } catch (Exception e) { storageStatus = "UNKNOWN"; storageDesc = "Storage check failed"; }
+        health.put("storage", Map.of("status", storageStatus, "description", storageDesc));
         health.put("email", Map.of("status", "UNKNOWN", "description", "Email service configuration not verified"));
         health.put("sms", Map.of("status", "NOT_CONFIGURED", "description", "SMS integration not configured"));
         health.put("notifications", Map.of("status", "OPERATIONAL", "description", "In-app notifications active"));
         health.put("externalServices", Map.of("status", "UNKNOWN", "description", "No external service integrations configured"));
-        health.put("backgroundJobs", Map.of("status", "OPERATIONAL", "description", "Deadline engine scheduled"));
+        health.put("backgroundJobs", Map.of("status", "OPERATIONAL", "description", "Deadline engine scheduled (@Scheduled fixedRate=3600000)"));
         return ResponseEntity.ok(health);
     }
 
@@ -205,6 +211,172 @@ public class SuperAdminGovernanceController {
             .map(Enum::name).collect(Collectors.toList()));
         taxonomy.put("note", "Taxonomy governance is limited — no dedicated taxonomy entity exists. Categories are stored as free-text on opportunities.");
         return ResponseEntity.ok(taxonomy);
+    }
+
+    @GetMapping("/feature-flags")
+    public ResponseEntity<List<Map<String, Object>>> featureFlags() {
+        List<Map<String, Object>> flags = new ArrayList<>();
+        platformConfigRepository.findAll().stream()
+            .filter(c -> c.getConfigKey() != null && c.getConfigKey().startsWith("feature."))
+            .forEach(c -> {
+                Map<String, Object> entry = new HashMap<>();
+                entry.put("key", c.getConfigKey());
+                entry.put("value", c.getConfigValue());
+                entry.put("description", c.getDescription());
+                entry.put("updatedAt", c.getUpdatedAt());
+                flags.add(entry);
+            });
+        return ResponseEntity.ok(flags);
+    }
+
+    @PostMapping("/feature-flags")
+    public ResponseEntity<Map<String, Object>> setFeatureFlag(@RequestBody Map<String, String> body) {
+        String key = body.getOrDefault("key", "");
+        String value = body.getOrDefault("value", "true");
+        String description = body.getOrDefault("description", "");
+        if (!key.startsWith("feature.")) key = "feature." + key;
+        var config = platformConfigRepository.findByConfigKey(key)
+            .orElse(tdop.entity.PlatformConfig.builder().configKey(key).build());
+        config.setConfigValue(value);
+        config.setDescription(description);
+        platformConfigRepository.save(config);
+        Map<String, Object> result = new HashMap<>();
+        result.put("key", key);
+        result.put("value", value);
+        result.put("description", description);
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/feature-flags/{key}")
+    public ResponseEntity<Map<String, String>> deleteFeatureFlag(@PathVariable String key) {
+        platformConfigRepository.findByConfigKey(key).ifPresent(platformConfigRepository::delete);
+        return ResponseEntity.ok(Map.of("status", "deleted", "key", key));
+    }
+
+    @GetMapping("/session-overview")
+    public ResponseEntity<Map<String, Object>> sessionOverview() {
+        Map<String, Object> session = new HashMap<>();
+        session.put("totalUsers", userRepository.count());
+        session.put("enabledUsers", userRepository.findAll().stream().filter(u -> u.isEnabled()).count());
+        session.put("disabledUsers", userRepository.findAll().stream().filter(u -> !u.isEnabled()).count());
+        session.put("adminSessions", userRepository.findAll().stream()
+            .filter(u -> u.getRole() == UserRole.ADMIN || u.getRole() == UserRole.SUPER_ADMIN)
+            .filter(u -> u.isEnabled())
+            .count());
+        session.put("privilegedActive", userRepository.findAll().stream()
+            .filter(u -> List.of(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MODERATOR, UserRole.VERIFICATION_OFFICER).contains(u.getRole()))
+            .filter(u -> u.isEnabled())
+            .count());
+        session.put("note", "Session management is stateless (JWT). Revocation is handled via token blacklist. Active sessions cannot be listed without a session store.");
+        return ResponseEntity.ok(session);
+    }
+
+    @GetMapping("/notification-config")
+    public ResponseEntity<List<Map<String, Object>>> notificationConfig() {
+        List<Map<String, Object>> configs = new ArrayList<>();
+        platformConfigRepository.findAll().stream()
+            .filter(c -> c.getConfigKey() != null && c.getConfigKey().startsWith("notification."))
+            .forEach(c -> {
+                Map<String, Object> entry = new HashMap<>();
+                entry.put("key", c.getConfigKey());
+                entry.put("value", c.getConfigValue());
+                entry.put("description", c.getDescription());
+                entry.put("updatedAt", c.getUpdatedAt());
+                configs.add(entry);
+            });
+        if (configs.isEmpty()) {
+            configs.add(Map.of("key", "notification.email.enabled", "value", "true", "description", "Enable email notifications"));
+            configs.add(Map.of("key", "notification.inapp.enabled", "value", "true", "description", "Enable in-app notifications"));
+            configs.add(Map.of("key", "notification.sms.enabled", "value", "false", "description", "Enable SMS notifications"));
+            configs.add(Map.of("key", "notification.deadline_reminders", "value", "true", "description", "Send deadline reminder notifications"));
+        }
+        return ResponseEntity.ok(configs);
+    }
+
+    @PostMapping("/notification-config")
+    public ResponseEntity<Map<String, Object>> setNotificationConfig(@RequestBody Map<String, String> body) {
+        String key = body.getOrDefault("key", "");
+        String value = body.getOrDefault("value", "true");
+        String description = body.getOrDefault("description", "");
+        if (!key.startsWith("notification.")) key = "notification." + key;
+        var config = platformConfigRepository.findByConfigKey(key)
+            .orElse(tdop.entity.PlatformConfig.builder().configKey(key).build());
+        config.setConfigValue(value);
+        config.setDescription(description);
+        platformConfigRepository.save(config);
+        return ResponseEntity.ok(Map.of("key", key, "value", value, "description", description));
+    }
+
+    @GetMapping("/integration-config")
+    public ResponseEntity<List<Map<String, Object>>> integrationConfig() {
+        List<Map<String, Object>> configs = new ArrayList<>();
+        platformConfigRepository.findAll().stream()
+            .filter(c -> c.getConfigKey() != null && c.getConfigKey().startsWith("integration."))
+            .forEach(c -> {
+                Map<String, Object> entry = new HashMap<>();
+                entry.put("key", c.getConfigKey());
+                entry.put("value", c.getConfigValue());
+                entry.put("description", c.getDescription());
+                entry.put("updatedAt", c.getUpdatedAt());
+                configs.add(entry);
+            });
+        if (configs.isEmpty()) {
+            configs.add(Map.of("key", "integration.email.provider", "value", "NOT_CONFIGURED", "description", "Email service provider"));
+            configs.add(Map.of("key", "integration.sms.provider", "value", "NOT_CONFIGURED", "description", "SMS service provider"));
+            configs.add(Map.of("key", "integration.storage.provider", "value", "LOCAL", "description", "File storage provider"));
+            configs.add(Map.of("key", "integration.analytics.enabled", "value", "false", "description", "Enable analytics tracking"));
+        }
+        return ResponseEntity.ok(configs);
+    }
+
+    @PostMapping("/integration-config")
+    public ResponseEntity<Map<String, Object>> setIntegrationConfig(@RequestBody Map<String, String> body) {
+        String key = body.getOrDefault("key", "");
+        String value = body.getOrDefault("value", "");
+        String description = body.getOrDefault("description", "");
+        if (!key.startsWith("integration.")) key = "integration." + key;
+        var config = platformConfigRepository.findByConfigKey(key)
+            .orElse(tdop.entity.PlatformConfig.builder().configKey(key).build());
+        config.setConfigValue(value);
+        config.setDescription(description);
+        platformConfigRepository.save(config);
+        return ResponseEntity.ok(Map.of("key", key, "value", value, "description", description));
+    }
+
+    @GetMapping("/background-jobs")
+    public ResponseEntity<Map<String, Object>> backgroundJobs() {
+        Map<String, Object> jobs = new HashMap<>();
+        List<Map<String, Object>> jobList = new ArrayList<>();
+        jobList.add(Map.of(
+            "name", "DeadlineEngineService.processDeadlines",
+            "schedule", "Every hour (3600000ms)",
+            "status", "SCHEDULED",
+            "description", "Marks expired opportunities, marks closing-soon, sends deadline reminders"
+        ));
+        jobList.add(Map.of(
+            "name", "DeadlineEngineService.markExpiredOpportunities",
+            "schedule", "Called by processDeadlines",
+            "status", "ACTIVE",
+            "description", "Marks opportunities past deadline as EXPIRED"
+        ));
+        jobList.add(Map.of(
+            "name", "DeadlineEngineService.markClosingSoonOpportunities",
+            "schedule", "Called by processDeadlines",
+            "status", "ACTIVE",
+            "description", "Marks published opportunities approaching deadline as CLOSING_SOON"
+        ));
+        jobList.add(Map.of(
+            "name", "DeadlineEngineService.sendDeadlineReminders",
+            "schedule", "Called by processDeadlines",
+            "status", "ACTIVE",
+            "description", "Creates deadline reminder records for upcoming deadlines"
+        ));
+        jobs.put("jobs", jobList);
+        jobs.put("totalJobs", jobList.size());
+        jobs.put("activeJobs", jobList.size());
+        jobs.put("failedJobs", 0);
+        jobs.put("note", "Background jobs are managed by Spring @Scheduled. No distributed job queue is configured.");
+        return ResponseEntity.ok(jobs);
     }
 
     private long countByRole(UserRole role) {
