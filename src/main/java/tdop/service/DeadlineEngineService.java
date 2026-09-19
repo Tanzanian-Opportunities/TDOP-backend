@@ -1,6 +1,7 @@
 package tdop.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,14 +9,17 @@ import tdop.entity.DeadlineReminder;
 import tdop.entity.Opportunity;
 import tdop.entity.enums.OpportunityStatus;
 import tdop.exception.ResourceNotFoundException;
+import tdop.notification.email.EmailService;
 import tdop.repository.DeadlineReminderRepository;
 import tdop.repository.OpportunityRepository;
 import tdop.repository.PlatformConfigRepository;
+import tdop.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -24,6 +28,8 @@ public class DeadlineEngineService {
     private final DeadlineReminderRepository reminderRepository;
     private final OpportunityRepository opportunityRepository;
     private final PlatformConfigRepository configRepository;
+    private final EmailService emailService;
+    private final UserRepository userRepository;
 
     @Scheduled(fixedRate = 3600000) // Every hour
     public void processDeadlines() {
@@ -73,9 +79,26 @@ public class DeadlineEngineService {
                             .sent(false)
                             .build();
                         reminderRepository.save(reminder);
+                        sendReminderEmail(opp, days);
                     }
                 }
             }
+        }
+    }
+
+    private void sendReminderEmail(Opportunity opp, int days) {
+        if (opp.getCreatedBy() == null || opp.getCreatedBy().getUser() == null) return;
+        try {
+            String email = opp.getCreatedBy().getUser().getEmail();
+            String subject = "Deadline Reminder: " + opp.getTitle() + " - " + days + " day(s) left";
+            String body = "<h2>Deadline Approaching</h2>"
+                + "<p>The opportunity <strong>" + opp.getTitle() + "</strong> has " + days + " day(s) remaining before its deadline.</p>"
+                + "<p>Deadline: " + opp.getDeadline() + "</p>"
+                + "<p>Please review and ensure the listing is up to date.</p>";
+            emailService.sendEmail(email, subject, body);
+            log.info("Deadline reminder sent for opportunity {} ({} days)", opp.getId(), days);
+        } catch (Exception e) {
+            log.warn("Failed to send deadline reminder for opportunity {}: {}", opp.getId(), e.getMessage());
         }
     }
 

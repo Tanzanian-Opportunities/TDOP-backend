@@ -35,7 +35,7 @@ public class OpportunityService {
     }
 
     public List<OpportunityResponse> searchOpportunities(String keyword) {
-        return opportunityRepository.findByTitleContainingIgnoreCase(keyword).stream()
+        return opportunityRepository.searchPublished(keyword).stream()
             .map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -76,6 +76,11 @@ public class OpportunityService {
 
     public List<OpportunityResponse> filterByCategory(String category) {
         return opportunityRepository.findByCategoryAndStatus(category, OpportunityStatus.PUBLISHED).stream()
+            .map(this::toResponse).collect(Collectors.toList());
+    }
+
+    public List<OpportunityResponse> searchFiltered(String category, String type, String location) {
+        return opportunityRepository.searchFiltered(category, type, location).stream()
             .map(this::toResponse).collect(Collectors.toList());
     }
 

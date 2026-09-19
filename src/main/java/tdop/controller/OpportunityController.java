@@ -41,6 +41,14 @@ public class OpportunityController {
         return ResponseEntity.ok(opportunityService.filterByCategory(category));
     }
 
+    @GetMapping("/search/filtered")
+    public ResponseEntity<List<OpportunityResponse>> searchFiltered(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String location) {
+        return ResponseEntity.ok(opportunityService.searchFiltered(category, type, location));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<OpportunityResponse> getById(@PathVariable Long id) {
         Opportunity opp = opportunityRepository.findById(id)
