@@ -36,7 +36,7 @@ public class ApplicationController {
         return ResponseEntity.ok(applicationService.getMyApplications(userId));
     }
 
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ORGANIZATION_OWNER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ADMIN', 'SUPER_ADMIN')")
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
                                           @RequestParam ApplicationStatus status) {

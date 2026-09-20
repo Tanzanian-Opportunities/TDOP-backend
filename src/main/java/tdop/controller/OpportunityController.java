@@ -58,14 +58,14 @@ public class OpportunityController {
         return ResponseEntity.ok(opportunityService.toResponse(opp));
     }
 
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ORGANIZATION_OWNER')")
+    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN')")
     @PostMapping
     public ResponseEntity<OpportunityResponse> create(@Valid @RequestBody OpportunityRequest request,
                                                       @RequestParam Long orgId) {
         return ResponseEntity.ok(opportunityService.createOpportunity(request, orgId));
     }
 
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ORGANIZATION_OWNER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ADMIN', 'SUPER_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<OpportunityResponse> update(@PathVariable Long id,
                                                       @Valid @RequestBody OpportunityRequest request,
@@ -74,7 +74,7 @@ public class OpportunityController {
         return ResponseEntity.ok(opportunityService.updateOpportunity(id, request));
     }
 
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ORGANIZATION_OWNER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ADMIN', 'SUPER_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication auth) {
         checkOwnership(id, auth);
@@ -82,7 +82,7 @@ public class OpportunityController {
         return ResponseEntity.ok().build();
     }
 
-    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ORGANIZATION_OWNER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ORGANIZATION', 'ORGANIZATION_ADMIN', 'ADMIN', 'SUPER_ADMIN')")
     @PostMapping("/{id}/publish")
     public ResponseEntity<OpportunityResponse> publish(@PathVariable Long id, Authentication auth) {
         checkOwnership(id, auth);

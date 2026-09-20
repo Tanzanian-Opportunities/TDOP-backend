@@ -2,6 +2,7 @@ package tdop.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.VerificationRequest;
@@ -12,6 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/verification-officer")
+@PreAuthorize("hasAnyRole('VERIFICATION_OFFICER', 'ADMIN', 'SUPER_ADMIN')")
 @RequiredArgsConstructor
 public class VerificationOfficerController {
 

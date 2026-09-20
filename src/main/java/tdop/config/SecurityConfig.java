@@ -44,11 +44,11 @@ public class SecurityConfig {
                 // Admin endpoints - ADMIN, SUPER_ADMIN
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
-                // Organization endpoints - ORGANIZATION, ORGANIZATION_ADMIN, ORGANIZATION_OWNER, ADMIN
-                .requestMatchers("/api/v1/organization/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ORGANIZATION_OWNER", "ADMIN", "SUPER_ADMIN")
+                // Organization endpoints - ORGANIZATION, ORGANIZATION_ADMIN, ADMIN
+                .requestMatchers("/api/v1/organization/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ADMIN", "SUPER_ADMIN")
 
                 // Verification endpoints
-                .requestMatchers("/api/v1/verify/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ORGANIZATION_OWNER", "ADMIN", "SUPER_ADMIN")
+                .requestMatchers("/api/v1/verify/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ADMIN", "SUPER_ADMIN")
 
                 // Verification officer endpoints
                 .requestMatchers("/api/v1/verification-officer/**").hasAnyRole("VERIFICATION_OFFICER", "ADMIN", "SUPER_ADMIN")
