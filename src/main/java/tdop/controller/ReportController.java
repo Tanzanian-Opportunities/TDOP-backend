@@ -35,9 +35,13 @@ public class ReportController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Report> get(@PathVariable Long id) {
-        // Would need a get by ID method
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Report> get(@PathVariable Long id, Authentication auth) {
+        Report report = reportService.getReportById(id);
+        Long reporterId = getUserId(auth);
+        if (!report.getReporter().getId().equals(reporterId)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(report);
     }
 
     private Long getUserId(Authentication auth) {

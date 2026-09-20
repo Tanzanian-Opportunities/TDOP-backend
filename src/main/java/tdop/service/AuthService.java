@@ -14,11 +14,13 @@ import tdop.dto.request.LoginRequest;
 import tdop.dto.request.RegisterRequest;
 import tdop.dto.response.AuthResponse;
 import tdop.dto.response.UserResponse;
+import tdop.entity.EmailVerificationToken;
 import tdop.entity.User;
 import tdop.entity.enums.UserRole;
 import tdop.exception.BadRequestException;
 import tdop.exception.ResourceNotFoundException;
 import tdop.notification.email.EmailService;
+import tdop.repository.EmailVerificationTokenRepository;
 import tdop.repository.UserRepository;
 
 import java.time.LocalDateTime;
@@ -26,6 +28,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -39,12 +43,11 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final AuditLogService auditLogService;
     private final EmailService emailService;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
 
     private final Set<String> revokedTokens = ConcurrentHashMap.newKeySet();
     private final java.util.Map<String, String> passwordResetTokens = new ConcurrentHashMap<>();
     private final java.util.Map<String, LocalDateTime> passwordResetExpiry = new ConcurrentHashMap<>();
-    private final java.util.Map<String, String> emailVerificationTokens = new ConcurrentHashMap<>();
-    private final java.util.Map<String, LocalDateTime> emailVerificationExpiry = new ConcurrentHashMap<>();
     private final java.util.Map<String, AtomicInteger> loginAttempts = new ConcurrentHashMap<>();
     private final java.util.Map<String, LocalDateTime> accountLockouts = new ConcurrentHashMap<>();
 
@@ -90,8 +93,13 @@ public class AuthService {
         auditLogService.logAction("REGISTER", "User", user.getId(), user.getId());
 
         String verificationToken = UUID.randomUUID().toString();
-        emailVerificationTokens.put(verificationToken, user.getEmail());
-        emailVerificationExpiry.put(verificationToken, LocalDateTime.now().plusMinutes(EMAIL_VERIFICATION_EXPIRY_MINUTES));
+        EmailVerificationToken evToken = EmailVerificationToken.builder()
+            .token(verificationToken)
+            .email(user.getEmail())
+            .expiresAt(LocalDateTime.now().plusMinutes(EMAIL_VERIFICATION_EXPIRY_MINUTES))
+            .used(false)
+            .build();
+        emailVerificationTokenRepository.save(evToken);
         try {
             String verifyUrl = System.getenv("FRONTEND_URL") + "/verify?token=" + verificationToken;
             emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verifyUrl);
@@ -170,16 +178,14 @@ public class AuthService {
     }
 
     public boolean verifyEmail(String token) {
-        LocalDateTime expiry = emailVerificationExpiry.get(token);
-        if (expiry == null || LocalDateTime.now().isAfter(expiry)) {
-            emailVerificationTokens.remove(token);
-            emailVerificationExpiry.remove(token);
+        EmailVerificationToken evToken = emailVerificationTokenRepository.findByToken(token)
+            .orElse(null);
+        if (evToken == null || evToken.isExpired() || evToken.isUsed()) {
             return false;
         }
-        String email = emailVerificationTokens.remove(token);
-        emailVerificationExpiry.remove(token);
-        if (email == null) return false;
-        userRepository.findByEmail(email).ifPresent(user -> {
+        evToken.setUsed(true);
+        emailVerificationTokenRepository.save(evToken);
+        userRepository.findByEmail(evToken.getEmail()).ifPresent(user -> {
             user.setVerified(true);
             userRepository.save(user);
         });

@@ -40,7 +40,8 @@ public class ApplicationController {
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
                                           @RequestParam ApplicationStatus status) {
-        return ResponseEntity.ok(applicationService.updateStatus(id, status));
+        Long operatorUserId = getCurrentUserId();
+        return ResponseEntity.ok(applicationService.updateStatus(id, status, operatorUserId));
     }
 
     @PostMapping("/{id}/withdraw")
