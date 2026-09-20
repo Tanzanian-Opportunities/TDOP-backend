@@ -24,7 +24,6 @@ ALTER TABLE verification_requests ALTER COLUMN status SET NOT NULL;
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_opportunities_status_deadline ON opportunities(status, deadline);
 CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);
-CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp_entity ON audit_logs(timestamp, entity_type);
 CREATE INDEX IF NOT EXISTS idx_reports_status_created ON reports(status, created_at);
 

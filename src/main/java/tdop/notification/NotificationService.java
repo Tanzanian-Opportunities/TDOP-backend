@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tdop.entity.Notification;
 import tdop.entity.enums.NotificationType;
 import tdop.entity.User;
+import tdop.exception.ForbiddenException;
 import tdop.repository.NotificationRepository;
 import java.util.List;
 
@@ -30,9 +31,12 @@ public class NotificationService {
         return notificationRepository.findByUserId(userId);
     }
 
-    public void markAsRead(Long notificationId) {
+    public void markAsRead(Long notificationId, Long userId) {
         Notification n = notificationRepository.findById(notificationId)
             .orElseThrow(() -> new RuntimeException("Notification not found"));
+        if (n.getUser() != null && !n.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only mark your own notifications as read");
+        }
         n.setRead(true);
         notificationRepository.save(n);
     }
