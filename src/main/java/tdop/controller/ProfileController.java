@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import tdop.dto.request.SkillRequest;
 import tdop.entity.CareerGoal;
 import tdop.entity.Experience;
@@ -55,6 +56,12 @@ public class ProfileController {
         String preference = body.getOrDefault("preference", "ALL");
         seekerProfileService.updateNotificationPreference(userId, preference);
         return ResponseEntity.ok(Map.of("notificationPreference", preference));
+    }
+
+    @GetMapping("/skills")
+    public ResponseEntity<?> getSkills() {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(seekerProfileService.getSkills(userId));
     }
 
     @PostMapping("/skills")
@@ -119,6 +126,12 @@ public class ProfileController {
         return ResponseEntity.ok("Experience removed");
     }
 
+    @GetMapping("/career-goals")
+    public ResponseEntity<?> getCareerGoals() {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(seekerProfileService.getCareerGoals(userId));
+    }
+
     @PostMapping("/career-goals")
     public ResponseEntity<?> addCareerGoal(@RequestBody Map<String, Object> request) {
         Long userId = getCurrentUserId();
@@ -138,6 +151,12 @@ public class ProfileController {
         Long userId = getCurrentUserId();
         seekerProfileService.removeCareerGoal(userId, goalId);
         return ResponseEntity.ok("Career goal removed");
+    }
+
+    @PostMapping("/avatar")
+    public ResponseEntity<?> uploadAvatar(@RequestParam("avatar") MultipartFile file) {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(seekerProfileService.uploadAvatar(userId, file));
     }
 
     private Long getCurrentUserId() {

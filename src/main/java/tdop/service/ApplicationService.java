@@ -87,6 +87,15 @@ public class ApplicationService {
         return applicationRepository.findByApplicantId(userId);
     }
 
+    public Application getApplication(Long id, Long userId) {
+        Application app = applicationRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+        if (!app.getApplicant().getId().equals(userId)) {
+            throw new ForbiddenException("You can only view your own applications");
+        }
+        return app;
+    }
+
     public List<Application> getApplicants(Long oppId) {
         return applicationRepository.findByOpportunityId(oppId);
     }

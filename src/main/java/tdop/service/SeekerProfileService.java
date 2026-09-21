@@ -8,6 +8,7 @@ import tdop.dto.request.SkillRequest;
 import tdop.entity.*;
 import tdop.entity.enums.NotificationPreference;
 import tdop.entity.enums.ProfileVisibility;
+import tdop.exception.BadRequestException;
 import tdop.exception.ForbiddenException;
 import tdop.exception.ResourceNotFoundException;
 import tdop.repository.*;
@@ -88,6 +89,29 @@ public class SeekerProfileService {
         profile.setNotificationPreference(NotificationPreference.valueOf(preference));
         seekerProfileRepository.save(profile);
         log.info("Notification preference updated for user={}: {}", userId, preference);
+    }
+
+    public java.util.List<Skill> getSkills(Long userId) {
+        return skillRepository.findByUserId(userId);
+    }
+
+    public java.util.List<CareerGoal> getCareerGoals(Long userId) {
+        return careerGoalRepository.findByUserId(userId);
+    }
+
+    public Map<String, String> uploadAvatar(Long userId, org.springframework.web.multipart.MultipartFile file) {
+        SeekerProfile profile = getOrCreateProfile(userId);
+        try {
+            String base64 = java.util.Base64.getEncoder().encodeToString(file.getBytes());
+            String contentType = file.getContentType();
+            String dataUrl = "data:" + (contentType != null ? contentType : "image/png") + ";base64," + base64;
+            profile.setProfilePicture(dataUrl);
+            seekerProfileRepository.save(profile);
+            log.info("Avatar uploaded for user={}", userId);
+            return Map.of("avatar", dataUrl);
+        } catch (java.io.IOException e) {
+            throw new BadRequestException("Failed to process avatar file");
+        }
     }
 
     public Skill addSkill(Long userId, SkillRequest request) {

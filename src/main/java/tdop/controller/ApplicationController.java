@@ -35,6 +35,12 @@ public class ApplicationController {
         return ResponseEntity.ok(applicationService.getMyApplications(userId));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getApplication(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        return ResponseEntity.ok(applicationService.getApplication(id, userId));
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id,
                                           @RequestParam ApplicationStatus status) {
