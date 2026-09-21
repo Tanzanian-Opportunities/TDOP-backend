@@ -3,6 +3,7 @@ package tdop.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.dto.request.ReportRequest;
@@ -27,14 +28,20 @@ public class ReportController {
             request.getReason(), request.getDescription()));
     }
 
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN', 'SUPER_ADMIN')")
     @GetMapping
     public ResponseEntity<List<Report>> list() {
         return ResponseEntity.ok(reportService.getPendingReports());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Report> get(@PathVariable Long id) {
-        return ResponseEntity.ok(reportService.getReportById(id));
+    public ResponseEntity<Report> get(@PathVariable Long id, Authentication auth) {
+        Report report = reportService.getReportById(id);
+        Long reporterId = getUserId(auth);
+        if (!report.getReporter().getId().equals(reporterId)) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(report);
     }
 
     private Long getUserId(Authentication auth) {

@@ -2,6 +2,7 @@ package tdop.controller.admin;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.PlatformConfig;
@@ -12,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/config")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 public class PlatformConfigController {
 
     private final PlatformConfigService configService;

@@ -13,7 +13,24 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, Long> 
     List<Opportunity> findByCreatedById(Long orgId);
     List<Opportunity> findByStatus(OpportunityStatus status);
     List<Opportunity> findByCategoryAndStatus(String category, OpportunityStatus status);
-    List<Opportunity> findByTitleContainingIgnoreCase(String title);
+    @Query("SELECT o FROM Opportunity o WHERE o.status = 'PUBLISHED' AND " +
+           "(LOWER(o.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(o.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(o.category) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(o.tags) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    List<Opportunity> searchPublished(@Param("keyword") String keyword);
+
+    @Query("SELECT o FROM Opportunity o WHERE o.status = 'PUBLISHED' AND " +
+           "(:location IS NULL OR LOWER(o.location) = LOWER(:location))")
+    List<Opportunity> findByLocation(@Param("location") String location);
+
+    @Query("SELECT o FROM Opportunity o WHERE o.status = 'PUBLISHED' AND " +
+           "(:category IS NULL OR LOWER(o.category) = LOWER(:category)) AND " +
+           "(:type IS NULL OR LOWER(o.type) = LOWER(:type)) AND " +
+           "(:location IS NULL OR LOWER(o.location) = LOWER(:location))")
+    List<Opportunity> searchFiltered(@Param("category") String category,
+                                      @Param("type") String type,
+                                      @Param("location") String location);
 
     @Query("SELECT o FROM Opportunity o WHERE o.status = 'PUBLISHED'")
     List<Opportunity> findPublished();

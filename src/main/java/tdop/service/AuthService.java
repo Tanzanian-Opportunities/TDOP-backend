@@ -14,16 +14,23 @@ import tdop.dto.request.LoginRequest;
 import tdop.dto.request.RegisterRequest;
 import tdop.dto.response.AuthResponse;
 import tdop.dto.response.UserResponse;
+import tdop.entity.EmailVerificationToken;
+import tdop.entity.PasswordResetToken;
+import tdop.entity.RevokedToken;
 import tdop.entity.User;
 import tdop.entity.enums.UserRole;
 import tdop.exception.BadRequestException;
 import tdop.exception.ResourceNotFoundException;
 import tdop.notification.email.EmailService;
+import tdop.repository.EmailVerificationTokenRepository;
+import tdop.repository.PasswordResetTokenRepository;
+import tdop.repository.RevokedTokenRepository;
 import tdop.repository.UserRepository;
 
-import java.util.Set;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
@@ -37,18 +44,30 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final AuditLogService auditLogService;
     private final EmailService emailService;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RevokedTokenRepository revokedTokenRepository;
 
-    private final Set<String> revokedTokens = ConcurrentHashMap.newKeySet();
-    private final java.util.Map<String, String> passwordResetTokens = new ConcurrentHashMap<>();
+    private final java.util.Map<String, AtomicInteger> loginAttempts = new ConcurrentHashMap<>();
+    private final java.util.Map<String, LocalDateTime> accountLockouts = new ConcurrentHashMap<>();
+
+    private static final int MAX_LOGIN_ATTEMPTS = 5;
+    private static final int LOCKOUT_MINUTES = 15;
+    private static final int PASSWORD_RESET_EXPIRY_MINUTES = 30;
+    private static final int EMAIL_VERIFICATION_EXPIRY_MINUTES = 60;
 
     public AuthResponse login(LoginRequest request) {
+        String email = request.getEmail();
+        checkAccountLockout(email);
         try {
             authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
         } catch (BadCredentialsException e) {
+            recordFailedLogin(email);
             throw new BadRequestException("Invalid credentials");
         }
-        User user = userRepository.findByEmail(request.getEmail())
+        clearLoginAttempts(email);
+        User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new BadRequestException("User not found"));
         if (!user.isEnabled()) {
             throw new BadRequestException("Account is disabled");
@@ -73,9 +92,17 @@ public class AuthService {
         userRepository.save(user);
         auditLogService.logAction("REGISTER", "User", user.getId(), user.getId());
 
+        String verificationToken = UUID.randomUUID().toString();
+        EmailVerificationToken evToken = EmailVerificationToken.builder()
+            .token(verificationToken)
+            .email(user.getEmail())
+            .expiresAt(LocalDateTime.now().plusMinutes(EMAIL_VERIFICATION_EXPIRY_MINUTES))
+            .used(false)
+            .build();
+        emailVerificationTokenRepository.save(evToken);
         try {
-            emailService.sendVerificationEmail(user.getEmail(), user.getFullName(),
-                "http://localhost:3000/verify?token=" + UUID.randomUUID());
+            String verifyUrl = System.getenv("FRONTEND_URL") + "/verify?token=" + verificationToken;
+            emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verifyUrl);
         } catch (Exception e) {
             log.warn("Could not send verification email to {}: {}", user.getEmail(), e.getMessage());
         }
@@ -98,13 +125,23 @@ public class AuthService {
     }
 
     public void logout(String token) {
-        revokedTokens.add(token);
+        try {
+            var claims = jwtUtil.extractAllClaims(token);
+            RevokedToken revokedToken = RevokedToken.builder()
+                .tokenHash(token)
+                .expiresAt(claims.getExpiration().toInstant()
+                    .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime())
+                .build();
+            revokedTokenRepository.save(revokedToken);
+        } catch (Exception e) {
+            log.warn("Could not persist revoked token: {}", e.getMessage());
+        }
         auditLogService.logAction("LOGOUT", "User", null, null);
         log.info("Token revoked for logout");
     }
 
     public boolean isTokenRevoked(String token) {
-        return revokedTokens.contains(token);
+        return revokedTokenRepository.existsByTokenHash(token);
     }
 
     public UserResponse getCurrentUser(String email) {
@@ -124,21 +161,69 @@ public class AuthService {
     public void forgotPassword(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
             String resetToken = UUID.randomUUID().toString();
-            passwordResetTokens.put(resetToken, email);
+            PasswordResetToken prt = PasswordResetToken.builder()
+                .token(resetToken)
+                .email(email)
+                .expiresAt(LocalDateTime.now().plusMinutes(PASSWORD_RESET_EXPIRY_MINUTES))
+                .used(false)
+                .build();
+            passwordResetTokenRepository.save(prt);
             auditLogService.logAction("FORGOT_PASSWORD", "User", user.getId(), user.getId());
-            log.info("Password reset token for {}: {}", email, resetToken);
+            log.info("Password reset token generated for {}", email);
         });
     }
 
     public void resetPassword(String token, String newPassword) {
-        String email = passwordResetTokens.remove(token);
-        if (email == null) {
+        PasswordResetToken prt = passwordResetTokenRepository.findByToken(token).orElse(null);
+        if (prt == null || prt.isUsed() || prt.isExpired()) {
             throw new BadRequestException("Invalid or expired reset token");
         }
-        User user = userRepository.findByEmail(email)
+        prt.setUsed(true);
+        passwordResetTokenRepository.save(prt);
+        User user = userRepository.findByEmail(prt.getEmail())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         auditLogService.logAction("RESET_PASSWORD", "User", user.getId(), user.getId());
+    }
+
+    public boolean verifyEmail(String token) {
+        EmailVerificationToken evToken = emailVerificationTokenRepository.findByToken(token)
+            .orElse(null);
+        if (evToken == null || evToken.isExpired() || evToken.isUsed()) {
+            return false;
+        }
+        evToken.setUsed(true);
+        emailVerificationTokenRepository.save(evToken);
+        userRepository.findByEmail(evToken.getEmail()).ifPresent(user -> {
+            user.setVerified(true);
+            userRepository.save(user);
+        });
+        return true;
+    }
+
+    private void checkAccountLockout(String email) {
+        LocalDateTime lockout = accountLockouts.get(email);
+        if (lockout != null && LocalDateTime.now().isBefore(lockout)) {
+            throw new BadRequestException("Account is locked due to too many failed attempts. Try again later.");
+        }
+        if (lockout != null && LocalDateTime.now().isAfter(lockout)) {
+            accountLockouts.remove(email);
+            loginAttempts.remove(email);
+        }
+    }
+
+    private void recordFailedLogin(String email) {
+        AtomicInteger attempts = loginAttempts.computeIfAbsent(email, k -> new AtomicInteger(0));
+        int count = attempts.incrementAndGet();
+        if (count >= MAX_LOGIN_ATTEMPTS) {
+            accountLockouts.put(email, LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES));
+            log.warn("Account locked for {} after {} failed attempts", email, count);
+        }
+    }
+
+    private void clearLoginAttempts(String email) {
+        loginAttempts.remove(email);
+        accountLockouts.remove(email);
     }
 }

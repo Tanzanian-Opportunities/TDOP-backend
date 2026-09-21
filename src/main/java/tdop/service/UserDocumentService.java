@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import tdop.entity.UserDocument;
+import tdop.exception.ForbiddenException;
+import tdop.exception.ResourceNotFoundException;
 import tdop.repository.UserDocumentRepository;
 import java.util.List;
 
@@ -26,9 +28,9 @@ public class UserDocumentService {
 
     public UserDocument getDocument(Long userId, Long documentId) {
         UserDocument doc = userDocumentRepository.findById(documentId)
-            .orElseThrow(() -> new RuntimeException("Document not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
         if (!doc.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to document");
+            throw new ForbiddenException("Unauthorized access to document");
         }
         return doc;
     }

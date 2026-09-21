@@ -44,6 +44,9 @@ public class FileStorageService {
         }
 
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
+        if (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
+            throw new BadRequestException("Invalid filename");
+        }
         String extension = "";
         int dotIndex = originalFilename.lastIndexOf('.');
         if (dotIndex > 0) {
@@ -64,6 +67,9 @@ public class FileStorageService {
     }
 
     public byte[] loadFile(String subDir, String filename) {
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            throw new BadRequestException("Invalid filename");
+        }
         try {
             Path filePath = Paths.get(fileStorageConfig.getUploadDir(), subDir, filename).toAbsolutePath().normalize();
             return Files.readAllBytes(filePath);
@@ -73,6 +79,9 @@ public class FileStorageService {
     }
 
     public void deleteFile(String subDir, String filename) {
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            throw new BadRequestException("Invalid filename");
+        }
         try {
             Path filePath = Paths.get(fileStorageConfig.getUploadDir(), subDir, filename).toAbsolutePath().normalize();
             Files.deleteIfExists(filePath);

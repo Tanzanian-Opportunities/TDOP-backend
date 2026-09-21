@@ -2,6 +2,7 @@ package tdop.controller.admin;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import tdop.service.UserService;
 import tdop.entity.enums.UserRole;
@@ -11,6 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 public class UserController {
 
     private final UserService userService;

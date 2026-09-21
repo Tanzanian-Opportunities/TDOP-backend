@@ -2,6 +2,8 @@ package tdop.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -12,10 +14,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
+import tdop.rbac.PermissionEvaluatorImpl;
 import java.util.Arrays;
 
 @Configuration
@@ -42,14 +46,17 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/opportunities/**").permitAll()
 
+                // Swagger / OpenAPI
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").permitAll()
+
                 // Admin endpoints - ADMIN, SUPER_ADMIN
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
-                // Organization endpoints - ORGANIZATION, ORGANIZATION_ADMIN, ORGANIZATION_OWNER, ADMIN
-                .requestMatchers("/api/v1/organization/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ORGANIZATION_OWNER", "ADMIN", "SUPER_ADMIN")
+                // Organization endpoints - ORGANIZATION, ORGANIZATION_ADMIN, ADMIN
+                .requestMatchers("/api/v1/organization/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ADMIN", "SUPER_ADMIN")
 
                 // Verification endpoints
-                .requestMatchers("/api/v1/verify/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ORGANIZATION_OWNER", "ADMIN", "SUPER_ADMIN")
+                .requestMatchers("/api/v1/verify/**").hasAnyRole("ORGANIZATION", "ORGANIZATION_ADMIN", "ADMIN", "SUPER_ADMIN")
 
                 // Verification officer endpoints
                 .requestMatchers("/api/v1/verification-officer/**").hasAnyRole("VERIFICATION_OFFICER", "ADMIN", "SUPER_ADMIN")
@@ -63,7 +70,17 @@ public class SecurityConfig {
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .headers(headers -> headers
+                .contentTypeOptions(contentType -> {})
+                .frameOptions(frame -> frame.deny())
+                .xssProtection(xss -> {})
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000))
+                .referrerPolicy(referrer -> referrer
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+            );
         return http.build();
     }
 
@@ -75,15 +92,21 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173"
-        ));
+        String allowedOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
+        } else {
+            configuration.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:5173"
+            ));
+        }
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -92,5 +115,12 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler(PermissionEvaluatorImpl permissionEvaluator) {
+        DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+        handler.setPermissionEvaluator(permissionEvaluator);
+        return handler;
     }
 }

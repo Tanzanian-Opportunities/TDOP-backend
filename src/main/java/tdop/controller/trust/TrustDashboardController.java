@@ -9,6 +9,7 @@ import tdop.entity.VerificationDocument;
 import tdop.entity.ModerationAction;
 import tdop.entity.Report;
 import tdop.entity.User;
+import tdop.dto.response.UserResponse;
 import tdop.repository.UserRepository;
 import tdop.service.*;
 import tdop.audit.AuditLogService;
@@ -104,7 +105,17 @@ public class TrustDashboardController {
     }
 
     @GetMapping("/users")
-    public ResponseEntity<List<User>> getTrustOfficers() {
-        return ResponseEntity.ok(userRepository.findAll());
+    public ResponseEntity<List<UserResponse>> getTrustOfficers() {
+        List<UserResponse> officers = userRepository.findAll().stream()
+            .map(u -> UserResponse.builder()
+                .id(u.getId())
+                .email(u.getEmail())
+                .fullName(u.getFullName())
+                .role(u.getRole().name())
+                .enabled(u.isEnabled())
+                .verified(u.isVerified())
+                .build())
+            .toList();
+        return ResponseEntity.ok(officers);
     }
 }

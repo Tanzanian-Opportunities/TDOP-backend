@@ -100,10 +100,17 @@ public class ApplicationService {
         return applicationRepository.findByOpportunityId(oppId);
     }
 
-    public Application updateStatus(Long id, ApplicationStatus status) {
+    public Application updateStatus(Long id, ApplicationStatus status, Long operatorUserId) {
         Application app = applicationRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+        if (operatorUserId != null && app.getOpportunity() != null &&
+            app.getOpportunity().getCreatedBy() != null &&
+            app.getOpportunity().getCreatedBy().getUser() != null &&
+            !app.getOpportunity().getCreatedBy().getUser().getId().equals(operatorUserId)) {
+            throw new ForbiddenException("You can only update applications for your own opportunities");
+        }
         ApplicationStatus oldStatus = app.getStatus();
+        LifecycleValidator.validateApplicationTransition(oldStatus, status);
         app.setStatus(status);
         Application saved = applicationRepository.save(app);
 
