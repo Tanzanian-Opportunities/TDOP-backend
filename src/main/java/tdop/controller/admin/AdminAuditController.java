@@ -1,13 +1,15 @@
 package tdop.controller.admin;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import tdop.entity.AuditLog;
 import tdop.repository.AuditLogRepository;
-import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin/audit")
@@ -18,14 +20,19 @@ public class AdminAuditController {
     private final AuditLogRepository auditLogRepository;
 
     @GetMapping
-    public ResponseEntity<List<AuditLog>> list() {
-        return ResponseEntity.ok(auditLogRepository.findAll());
-    }
-
-    @GetMapping("/entity/{entityType}")
-    public ResponseEntity<List<AuditLog>> byEntity(@PathVariable String entityType) {
-        return ResponseEntity.ok(auditLogRepository.findAll().stream()
-            .filter(a -> entityType.equals(a.getEntityType()))
-            .toList());
+    public ResponseEntity<Map<String, Object>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String entityType) {
+        PageRequest pageRequest = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "timestamp"));
+        Page<AuditLog> result = auditLogRepository.findByFilters(action, entityType, pageRequest);
+        return ResponseEntity.ok(Map.of(
+            "data", result.getContent(),
+            "total", result.getTotalElements(),
+            "page", result.getNumber(),
+            "limit", result.getSize(),
+            "totalPages", result.getTotalPages()
+        ));
     }
 }

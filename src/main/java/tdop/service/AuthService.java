@@ -15,21 +15,22 @@ import tdop.dto.request.RegisterRequest;
 import tdop.dto.response.AuthResponse;
 import tdop.dto.response.UserResponse;
 import tdop.entity.EmailVerificationToken;
+import tdop.entity.PasswordResetToken;
+import tdop.entity.RevokedToken;
 import tdop.entity.User;
 import tdop.entity.enums.UserRole;
 import tdop.exception.BadRequestException;
 import tdop.exception.ResourceNotFoundException;
 import tdop.notification.email.EmailService;
 import tdop.repository.EmailVerificationTokenRepository;
+import tdop.repository.PasswordResetTokenRepository;
+import tdop.repository.RevokedTokenRepository;
 import tdop.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Set;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -44,10 +45,9 @@ public class AuthService {
     private final AuditLogService auditLogService;
     private final EmailService emailService;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RevokedTokenRepository revokedTokenRepository;
 
-    private final Set<String> revokedTokens = ConcurrentHashMap.newKeySet();
-    private final java.util.Map<String, String> passwordResetTokens = new ConcurrentHashMap<>();
-    private final java.util.Map<String, LocalDateTime> passwordResetExpiry = new ConcurrentHashMap<>();
     private final java.util.Map<String, AtomicInteger> loginAttempts = new ConcurrentHashMap<>();
     private final java.util.Map<String, LocalDateTime> accountLockouts = new ConcurrentHashMap<>();
 
@@ -125,13 +125,23 @@ public class AuthService {
     }
 
     public void logout(String token) {
-        revokedTokens.add(token);
+        try {
+            var claims = jwtUtil.extractAllClaims(token);
+            RevokedToken revokedToken = RevokedToken.builder()
+                .tokenHash(token)
+                .expiresAt(claims.getExpiration().toInstant()
+                    .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime())
+                .build();
+            revokedTokenRepository.save(revokedToken);
+        } catch (Exception e) {
+            log.warn("Could not persist revoked token: {}", e.getMessage());
+        }
         auditLogService.logAction("LOGOUT", "User", null, null);
         log.info("Token revoked for logout");
     }
 
     public boolean isTokenRevoked(String token) {
-        return revokedTokens.contains(token);
+        return revokedTokenRepository.existsByTokenHash(token);
     }
 
     public UserResponse getCurrentUser(String email) {
@@ -151,26 +161,26 @@ public class AuthService {
     public void forgotPassword(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
             String resetToken = UUID.randomUUID().toString();
-            passwordResetTokens.put(resetToken, email);
-            passwordResetExpiry.put(resetToken, LocalDateTime.now().plusMinutes(PASSWORD_RESET_EXPIRY_MINUTES));
+            PasswordResetToken prt = PasswordResetToken.builder()
+                .token(resetToken)
+                .email(email)
+                .expiresAt(LocalDateTime.now().plusMinutes(PASSWORD_RESET_EXPIRY_MINUTES))
+                .used(false)
+                .build();
+            passwordResetTokenRepository.save(prt);
             auditLogService.logAction("FORGOT_PASSWORD", "User", user.getId(), user.getId());
             log.info("Password reset token generated for {}", email);
         });
     }
 
     public void resetPassword(String token, String newPassword) {
-        LocalDateTime expiry = passwordResetExpiry.get(token);
-        if (expiry == null || LocalDateTime.now().isAfter(expiry)) {
-            passwordResetTokens.remove(token);
-            passwordResetExpiry.remove(token);
+        PasswordResetToken prt = passwordResetTokenRepository.findByToken(token).orElse(null);
+        if (prt == null || prt.isUsed() || prt.isExpired()) {
             throw new BadRequestException("Invalid or expired reset token");
         }
-        String email = passwordResetTokens.remove(token);
-        passwordResetExpiry.remove(token);
-        if (email == null) {
-            throw new BadRequestException("Invalid or expired reset token");
-        }
-        User user = userRepository.findByEmail(email)
+        prt.setUsed(true);
+        passwordResetTokenRepository.save(prt);
+        User user = userRepository.findByEmail(prt.getEmail())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
