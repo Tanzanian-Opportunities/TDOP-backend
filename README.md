@@ -203,5 +203,8 @@ mvn test
 
 ## Related
 
-- [TDOP Frontend](../TDOP-frontend/README.md) — React + TypeScript SPA
-- [TDOP Root README](../README.md) — Full project overview
+- [TDOP Frontend](https://github.com/Tanzanian-Opportunities/TDOP-frontend) — React + TypeScript SPA
+- [TDOP Infra](https://github.com/Tanzanian-Opportunities/TDOP-infra) — Docker Compose / Nginx deployment
+- [TDOP Docs](https://github.com/Tanzanian-Opportunities/TDOP-docs) — governance, specs, and project management
+- [Umbrella index](https://github.com/Tanzanian-Opportunities/Tanzanian_Opportunities) — full project overview
+- [Kanban board](https://github.com/orgs/Tanzanian-Opportunities/projects/1) — task tracking (mirrors `TDOP-docs/PROJECT_MANAGEMENT.md`)
