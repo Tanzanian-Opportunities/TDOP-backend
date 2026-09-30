@@ -13,17 +13,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import tdop.dto.request.LoginRequest;
 import tdop.dto.request.RegisterRequest;
 import tdop.dto.request.AuthRequest;
 import tdop.dto.response.AuthResponse;
+import tdop.dto.response.UserResponse;
 import tdop.service.AuthService;
+import java.util.List;
 
 @WebMvcTest(AuthController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
     @Autowired
@@ -31,6 +37,9 @@ class AuthControllerTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private tdop.config.JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -62,10 +71,14 @@ class AuthControllerTest {
             .fullName("Test User")
             .role("SEEKER")
             .build();
+
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken("test@example.com", null, List.of()));
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         loginRequest = null;
         registerRequest = null;
         authRequest = null;
@@ -87,7 +100,14 @@ class AuthControllerTest {
 
     @Test
     void testRegisterSuccess() throws Exception {
-        when(authService.register(any(RegisterRequest.class))).thenReturn(authResponse);
+        AuthResponse registerResponse = AuthResponse.builder()
+            .token("eyJhbGciOiJIUzI1NiJ9.test.token")
+            .refreshToken("refresh.token.here")
+            .email("new@example.com")
+            .fullName("New User")
+            .role("SEEKER")
+            .build();
+        when(authService.register(any(RegisterRequest.class))).thenReturn(registerResponse);
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -100,11 +120,18 @@ class AuthControllerTest {
 
     @Test
     void testRefreshTokenSuccess() throws Exception {
-        when(authService.refreshToken("refresh@example.com")).thenReturn(authResponse);
+        AuthResponse refreshResponse = AuthResponse.builder()
+            .token("eyJhbGciOiJIUzI1NiJ9.test.token")
+            .refreshToken("refresh.token.here")
+            .email("refresh@example.com")
+            .fullName("Test User")
+            .role("SEEKER")
+            .build();
+        when(authService.refreshToken("refresh.token.here")).thenReturn(refreshResponse);
 
         mockMvc.perform(post("/api/v1/auth/refresh")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(authRequest)))
+                .content("{\"refreshToken\":\"refresh.token.here\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.refreshToken").value("refresh.token.here"))
             .andExpect(jsonPath("$.email").value("refresh@example.com"));
@@ -114,13 +141,25 @@ class AuthControllerTest {
     void testLogoutSuccess() throws Exception {
         mockMvc.perform(post("/api/v1/auth/logout"))
             .andExpect(status().isOk())
-            .andExpect(content().string("Logged out"));
+            .andExpect(content().string("Logged out successfully"));
     }
 
     @Test
     void testGetProfileSuccess() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/profile"))
+        UserResponse profile = UserResponse.builder()
+            .id(1L)
+            .email("test@example.com")
+            .fullName("Test User")
+            .phone("1234567890")
+            .role("SEEKER")
+            .enabled(true)
+            .verified(true)
+            .build();
+        when(authService.getCurrentUser("test@example.com")).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/auth/me"))
             .andExpect(status().isOk())
-            .andExpect(content().string("Profile"));
+            .andExpect(jsonPath("$.email").value("test@example.com"))
+            .andExpect(jsonPath("$.fullName").value("Test User"));
     }
 }

@@ -15,20 +15,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import tdop.controller.admin.UserController;
 import tdop.controller.admin.AdminOpportunityController;
 import tdop.dto.response.UserResponse;
+import tdop.dto.response.OpportunityResponse;
+import tdop.entity.ModerationAction;
+import tdop.entity.User;
+import tdop.entity.enums.UserRole;
 import tdop.service.UserService;
 import tdop.service.OpportunityService;
+import tdop.service.OpportunityLifecycleService;
+import tdop.service.ModerationService;
 import tdop.service.AnalyticsService;
 import java.util.List;
 import java.util.Map;
 
 @WebMvcTest({UserController.class, AdminOpportunityController.class})
+@AutoConfigureMockMvc(addFilters = false)
 class AdminControllerTest {
 
     @Autowired
@@ -42,6 +52,15 @@ class AdminControllerTest {
 
     @MockBean
     private AnalyticsService analyticsService;
+
+    @MockBean
+    private OpportunityLifecycleService opportunityLifecycleService;
+
+    @MockBean
+    private ModerationService moderationService;
+
+    @MockBean
+    private tdop.config.JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -59,11 +78,24 @@ class AdminControllerTest {
             .enabled(true)
             .verified(true)
             .build();
+
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken("admin@example.com", null, List.of()));
+        when(userService.getUserIdByEmail("admin@example.com")).thenReturn(1L);
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         userResponse = null;
+    }
+
+    private org.springframework.test.web.servlet.request.RequestPostProcessor asAdmin() {
+        return request -> {
+            request.setUserPrincipal(new UsernamePasswordAuthenticationToken(
+                "admin@example.com", null, List.of()));
+            return request;
+        };
     }
 
     @Test
@@ -98,16 +130,32 @@ class AdminControllerTest {
 
     @Test
     void testVerifyOpportunity() throws Exception {
-        mockMvc.perform(put("/api/v1/admin/opportunities/1/verify"))
+        OpportunityResponse oppResponse = OpportunityResponse.builder()
+            .id(1L)
+            .title("Test Opportunity")
+            .status("VERIFIED")
+            .build();
+        when(opportunityLifecycleService.verifyOpportunity(eq(1L), eq(1L), eq(true), any()))
+            .thenReturn(oppResponse);
+
+        mockMvc.perform(put("/api/v1/admin/opportunities/1/verify").with(asAdmin()).param("approved", "true"))
             .andExpect(status().isOk())
-            .andExpect(content().string("Verified"));
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.status").value("VERIFIED"));
     }
 
     @Test
     void testModerateOpportunity() throws Exception {
-        mockMvc.perform(delete("/api/v1/admin/opportunities/1/moderate"))
+        ModerationAction action = ModerationAction.builder()
+            .id(1L)
+            .action("REJECT")
+            .build();
+        when(moderationService.reject(eq(1L), eq(1L), any())).thenReturn(action);
+
+        mockMvc.perform(delete("/api/v1/admin/opportunities/1/moderate").with(asAdmin()))
             .andExpect(status().isOk())
-            .andExpect(content().string("Moderated"));
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.action").value("REJECT"));
     }
 
     @Test

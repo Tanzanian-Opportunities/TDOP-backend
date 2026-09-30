@@ -59,7 +59,7 @@ class OpportunityServiceTest {
 
         org = OrganizationProfile.builder().id(1L).orgName("Test Corp").build();
         opportunity = Opportunity.builder().id(1L).title("Software Engineer")
-            .status(OpportunityStatus.DRAFT).createdBy(org).build();
+            .type(OpportunityType.FULL_TIME).status(OpportunityStatus.PUBLISHED).createdBy(org).build();
         response = OpportunityResponse.builder().id(1L).title("Software Engineer")
             .status("DRAFT").location("Remote").type("FULL_TIME")
             .category("Engineering").salaryRange("80000-120000")
@@ -89,13 +89,13 @@ class OpportunityServiceTest {
 
     @Test
     void testSearchOpportunities() {
-        when(opportunityRepository.findByTitleContainingIgnoreCase("engineer")).thenReturn(List.of(opportunity));
+        when(opportunityRepository.searchPublished("engineer")).thenReturn(List.of(opportunity));
 
         List<OpportunityResponse> result = opportunityService.searchOpportunities("engineer");
 
         assertNotNull(result);
         assertEquals(1, result.size());
-        verify(opportunityRepository).findByTitleContainingIgnoreCase("engineer");
+        verify(opportunityRepository).searchPublished("engineer");
     }
 
     @Test

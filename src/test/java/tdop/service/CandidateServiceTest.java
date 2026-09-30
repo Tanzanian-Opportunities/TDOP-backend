@@ -45,7 +45,7 @@ class CandidateServiceTest {
         OrganizationProfile orgProfile = new OrganizationProfile();
         orgProfile.setUser(orgUser);
         opportunity = Opportunity.builder().id(100L).createdBy(orgProfile).build();
-        application = Application.builder().id(1000L).opportunity(opportunity).applicant(otherUser).status(ApplicationStatus.SUBMITTED).build();
+        application = Application.builder().id(1000L).opportunity(opportunity).applicant(otherUser).status(ApplicationStatus.APPLIED).build();
     }
 
     @Test

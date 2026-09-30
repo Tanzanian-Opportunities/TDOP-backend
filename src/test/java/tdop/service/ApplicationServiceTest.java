@@ -15,12 +15,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tdop.audit.AuditLogService;
 import tdop.dto.request.ApplicationRequest;
 import tdop.entity.Application;
 import tdop.entity.enums.ApplicationStatus;
 import tdop.entity.Opportunity;
 import tdop.entity.User;
 import tdop.exception.ResourceNotFoundException;
+import tdop.notification.NotificationService;
+import tdop.notification.email.EmailService;
 import tdop.repository.ApplicationRepository;
 import tdop.repository.OpportunityRepository;
 import tdop.repository.UserRepository;
@@ -39,6 +42,15 @@ class ApplicationServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private EmailService emailService;
+
     @InjectMocks
     private ApplicationService applicationService;
 
@@ -54,7 +66,7 @@ class ApplicationServiceTest {
         appRequest.setResumeUrl("http://example.com/resume.pdf");
 
         applicant = User.builder().id(2L).email("applicant@example.com").build();
-        opportunity = Opportunity.builder().id(1L).title("Software Engineer").build();
+        opportunity = Opportunity.builder().id(1L).title("Software Engineer").applicationCount(0L).build();
         application = Application.builder().id(1L).applicant(applicant).opportunity(opportunity)
             .status(ApplicationStatus.APPLIED).build();
     }
@@ -119,7 +131,7 @@ class ApplicationServiceTest {
         when(applicationRepository.save(any(Application.class))).thenReturn(application);
         application.setStatus(ApplicationStatus.INTERVIEW);
 
-        Application result = applicationService.updateStatus(1L, ApplicationStatus.INTERVIEW);
+        Application result = applicationService.updateStatus(1L, ApplicationStatus.INTERVIEW, 2L);
 
         assertNotNull(result);
         assertEquals(ApplicationStatus.INTERVIEW, result.getStatus());
@@ -131,7 +143,7 @@ class ApplicationServiceTest {
         when(applicationRepository.findById(999L)).thenReturn(Optional.empty());
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
-            applicationService.updateStatus(999L, ApplicationStatus.INTERVIEW);
+            applicationService.updateStatus(999L, ApplicationStatus.INTERVIEW, 2L);
         });
         assertEquals("Application not found", exception.getMessage());
     }

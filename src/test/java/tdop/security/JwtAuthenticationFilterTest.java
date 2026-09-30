@@ -41,6 +41,9 @@ class JwtAuthenticationFilterTest {
     private CustomUserDetailsService userDetailsService;
 
     @Mock
+    private tdop.service.AuthService authService;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -119,7 +122,7 @@ class JwtAuthenticationFilterTest {
     void testDoFilterInternalWhenAlreadyAuthenticated() throws Exception {
         when(request.getHeader("Authorization")).thenReturn("Bearer " + validToken);
         when(jwtUtil.extractUsername(validToken)).thenReturn(username);
-        when(SecurityContextHolder.getContext().getAuthentication()).thenReturn(
+        SecurityContextHolder.getContext().setAuthentication(
             new UsernamePasswordAuthenticationToken(userDetails, null, Collections.emptyList()));
 
         jwtAuthenticationFilter.doFilter(request, response, filterChain);

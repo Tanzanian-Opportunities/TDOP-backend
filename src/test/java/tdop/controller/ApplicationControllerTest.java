@@ -1,6 +1,7 @@
 package tdop.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,17 +16,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import tdop.dto.request.ApplicationRequest;
 import tdop.entity.enums.ApplicationStatus;
+import tdop.entity.enums.UserRole;
 import tdop.service.ApplicationService;
 import tdop.entity.Application;
+import tdop.entity.User;
 import java.util.List;
 
 @WebMvcTest(ApplicationController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ApplicationControllerTest {
 
     @Autowired
@@ -33,6 +40,12 @@ class ApplicationControllerTest {
 
     @MockBean
     private ApplicationService applicationService;
+
+    @MockBean
+    private tdop.service.UserService userService;
+
+    @MockBean
+    private tdop.config.JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -51,10 +64,21 @@ class ApplicationControllerTest {
         application.setStatus(ApplicationStatus.APPLIED);
         application.setCoverLetter("I am a great fit for this role.");
         application.setResumeUrl("http://example.com/resume.pdf");
+        application.setApplicant(User.builder()
+            .id(2L)
+            .email("applicant@example.com")
+            .fullName("Test Applicant")
+            .role(UserRole.SEEKER)
+            .build());
+
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken("applicant@example.com", null, List.of()));
+        when(userService.getUserIdByEmail("applicant@example.com")).thenReturn(2L);
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         applicationRequest = null;
         application = null;
     }
@@ -64,7 +88,7 @@ class ApplicationControllerTest {
         when(applicationService.apply(eq(1L), eq(2L), any(String.class), any(String.class)))
             .thenReturn(application);
 
-        mockMvc.perform(post("/api/v1/applications?oppId=1&applicantId=2")
+        mockMvc.perform(post("/api/v1/applications?oppId=1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(applicationRequest)))
             .andExpect(status().isOk())
@@ -76,7 +100,7 @@ class ApplicationControllerTest {
     void testTrackApplications() throws Exception {
         when(applicationService.getMyApplications(2L)).thenReturn(List.of(application));
 
-        mockMvc.perform(get("/api/v1/applications/me?userId=2"))
+        mockMvc.perform(get("/api/v1/applications/me"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(1))
             .andExpect(jsonPath("$[0].status").value("APPLIED"));
@@ -84,7 +108,8 @@ class ApplicationControllerTest {
 
     @Test
     void testUpdateStatusSuccess() throws Exception {
-        when(applicationService.updateStatus(eq(1L), eq(ApplicationStatus.INTERVIEW)))
+        application.setStatus(ApplicationStatus.INTERVIEW);
+        when(applicationService.updateStatus(eq(1L), eq(ApplicationStatus.INTERVIEW), anyLong()))
             .thenReturn(application);
 
         mockMvc.perform(put("/api/v1/applications/1/status?status=INTERVIEW"))
@@ -99,7 +124,7 @@ class ApplicationControllerTest {
         when(applicationService.apply(eq(1L), eq(2L), eq(""), any(String.class)))
             .thenReturn(application);
 
-        mockMvc.perform(post("/api/v1/applications?oppId=1&applicantId=2")
+        mockMvc.perform(post("/api/v1/applications?oppId=1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(applicationRequest)))
             .andExpect(status().isOk())

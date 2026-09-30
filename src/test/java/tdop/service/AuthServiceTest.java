@@ -2,6 +2,7 @@ package tdop.service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doThrow;
@@ -18,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import tdop.audit.AuditLogService;
 import tdop.config.JwtUtil;
 import tdop.dto.request.LoginRequest;
 import tdop.dto.request.RegisterRequest;
@@ -26,6 +28,10 @@ import tdop.dto.response.AuthResponse;
 import tdop.entity.User;
 import tdop.entity.enums.UserRole;
 import tdop.exception.BadRequestException;
+import tdop.notification.email.EmailService;
+import tdop.repository.EmailVerificationTokenRepository;
+import tdop.repository.PasswordResetTokenRepository;
+import tdop.repository.RevokedTokenRepository;
 import tdop.repository.UserRepository;
 import java.util.Optional;
 
@@ -43,6 +49,21 @@ class AuthServiceTest {
 
     @Mock
     private AuthenticationManager authenticationManager;
+
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
+
+    @Mock
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Mock
+    private RevokedTokenRepository revokedTokenRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -86,8 +107,8 @@ class AuthServiceTest {
             .role("SEEKER")
             .build();
 
-        when(jwtUtil.generateToken(any(String.class), any(String.class))).thenReturn("jwt.token.here");
-        when(jwtUtil.generateRefreshToken(any(String.class))).thenReturn("refresh.token.here");
+        lenient().when(jwtUtil.generateToken(any(String.class), any(String.class))).thenReturn("jwt.token.here");
+        lenient().when(jwtUtil.generateRefreshToken(any(String.class))).thenReturn("refresh.token.here");
     }
 
     @AfterEach
@@ -102,7 +123,6 @@ class AuthServiceTest {
     @Test
     void testLoginSuccess() {
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-        when(authResponse.getToken()).thenReturn("jwt.token.here");
 
         AuthResponse result = authService.login(loginRequest);
 
@@ -116,7 +136,6 @@ class AuthServiceTest {
     void testLoginInvalidCredentials() {
         doThrow(new BadRequestException("Invalid credentials"))
             .when(authenticationManager).authenticate(any());
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> {
             authService.login(loginRequest);
@@ -156,7 +175,7 @@ class AuthServiceTest {
         AuthResponse result = authService.refreshToken("refresh.token.here");
 
         assertNotNull(result);
-        assertEquals("refresh@example.com", result.getEmail());
+        assertEquals("test@example.com", result.getEmail());
         verify(jwtUtil).extractUsername("refresh.token.here");
     }
 

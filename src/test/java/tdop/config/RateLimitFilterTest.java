@@ -1,6 +1,7 @@
 package tdop.config;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -17,7 +18,7 @@ class RateLimitFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilterInternal(request, response, (req, res) -> {
-            res.setStatus(200);
+            ((HttpServletResponse) res).setStatus(200);
         });
 
         assertEquals(200, response.getStatus());
@@ -29,7 +30,7 @@ class RateLimitFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilterInternal(request, response, (req, res) -> {
-            res.setStatus(200);
+            ((HttpServletResponse) res).setStatus(200);
         });
 
         assertEquals(200, response.getStatus());
@@ -37,14 +38,11 @@ class RateLimitFilterTest {
 
     @Test
     void testLoginExceedingRateLimit() throws ServletException, IOException {
-        MockHttpServletRequest response_request = new MockHttpServletRequest("POST", "/api/v1/auth/login");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-
         for (int i = 0; i < 22; i++) {
             MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/v1/auth/login");
             req.setRemoteAddr("192.168.1.1");
             MockHttpServletResponse res = new MockHttpServletResponse();
-            filter.doFilterInternal(req, res, (req2, res2) -> res2.setStatus(200));
+            filter.doFilterInternal(req, res, (req2, res2) -> ((HttpServletResponse) res2).setStatus(200));
             if (i == 21) {
                 assertEquals(429, res.getStatus());
             }

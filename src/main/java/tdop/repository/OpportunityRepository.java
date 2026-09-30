@@ -20,8 +20,10 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, Long> 
            "LOWER(o.tags) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     List<Opportunity> searchPublished(@Param("keyword") String keyword);
 
+List<Opportunity> findByTitleContainingIgnoreCase(String title);
+
     @Query("SELECT o FROM Opportunity o WHERE o.status = 'PUBLISHED' AND " +
-           "(:location IS NULL OR LOWER(o.location) = LOWER(:location))")
+            "(:location IS NULL OR LOWER(o.location) = LOWER(:location))")
     List<Opportunity> findByLocation(@Param("location") String location);
 
     @Query("SELECT o FROM Opportunity o WHERE o.status = 'PUBLISHED' AND " +

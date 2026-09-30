@@ -17,17 +17,26 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import tdop.dto.request.OpportunityRequest;
 import tdop.dto.response.OpportunityResponse;
+import tdop.entity.User;
+import tdop.entity.enums.UserRole;
+import tdop.repository.OpportunityRepository;
+import tdop.repository.UserRepository;
 import tdop.service.OpportunityService;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @WebMvcTest(OpportunityController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class OpportunityControllerTest {
 
     @Autowired
@@ -35,6 +44,15 @@ class OpportunityControllerTest {
 
     @MockBean
     private OpportunityService opportunityService;
+
+    @MockBean
+    private OpportunityRepository opportunityRepository;
+
+    @MockBean
+    private UserRepository userRepository;
+
+    @MockBean
+    private tdop.config.JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -44,6 +62,16 @@ class OpportunityControllerTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken("admin@example.com", null, List.of()));
+        User admin = User.builder()
+            .id(1L)
+            .email("admin@example.com")
+            .fullName("Admin User")
+            .role(UserRole.ADMIN)
+            .build();
+        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+
         opportunityRequest = new OpportunityRequest();
         opportunityRequest.setTitle("Software Engineer");
         opportunityRequest.setDescription("Full-time software engineering role");
@@ -71,8 +99,17 @@ class OpportunityControllerTest {
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         opportunityRequest = null;
         opportunityResponse = null;
+    }
+
+    private org.springframework.test.web.servlet.request.RequestPostProcessor asAdmin() {
+        return request -> {
+            request.setUserPrincipal(new UsernamePasswordAuthenticationToken(
+                "admin@example.com", null, List.of()));
+            return request;
+        };
     }
 
     @Test
@@ -121,7 +158,7 @@ class OpportunityControllerTest {
     void testUpdateOpportunity() throws Exception {
         when(opportunityService.updateOpportunity(eq(1L), any(OpportunityRequest.class))).thenReturn(opportunityResponse);
 
-        mockMvc.perform(put("/api/v1/opportunities/1")
+        mockMvc.perform(put("/api/v1/opportunities/1").with(asAdmin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(opportunityRequest)))
             .andExpect(status().isOk())
@@ -133,7 +170,7 @@ class OpportunityControllerTest {
     void testDeleteOpportunity() throws Exception {
         doNothing().when(opportunityService).deleteOpportunity(1L);
 
-        mockMvc.perform(delete("/api/v1/opportunities/1"))
+        mockMvc.perform(delete("/api/v1/opportunities/1").with(asAdmin()))
             .andExpect(status().isOk());
     }
 
@@ -141,7 +178,7 @@ class OpportunityControllerTest {
     void testPublishOpportunity() throws Exception {
         when(opportunityService.publishOpportunity(1L)).thenReturn(opportunityResponse);
 
-        mockMvc.perform(post("/api/v1/opportunities/1/publish"))
+        mockMvc.perform(post("/api/v1/opportunities/1/publish").with(asAdmin()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("PUBLISHED"));
     }
