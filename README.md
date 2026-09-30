@@ -201,10 +201,27 @@ mvn test
 | `MAIL_*` | empty | SMTP for email notifications |
 | `APP_URL` | `http://localhost:8080/api/v1` | Public API base URL |
 
+## Reverse proxy (nginx)
+
+This repository carries the deployment's Nginx edge configuration in
+[`nginx.conf`](nginx.conf). It runs at the origin (behind Cloudflare) and:
+
+- proxies `/api/`, `/ws/` (WebSocket), `/swagger-ui/`, and `/health` to the
+  `tdop-backend` upstream (`tdop-backend:8080` in Docker, `localhost:8080` locally);
+- rate-limits API traffic (100 req/min/IP, burst 20) and connection limits;
+- sets security headers (HSTS, CSP, X-Frame-Options) and enforces HTTPS redirect;
+- serves the SPA static fallback and long-lived caching for assets.
+
+The frontend container image uses its own simpler `nginx.conf` from `TDOP-frontend`.
+
 ## Related
 
 - [TDOP Frontend](https://github.com/Tanzanian-Opportunities/TDOP-frontend) — React + TypeScript SPA
-- [TDOP Infra](https://github.com/Tanzanian-Opportunities/TDOP-infra) — Docker Compose / Nginx deployment
+- [TDOP Infra](https://github.com/Tanzanian-Opportunities/TDOP-infra) — Docker Compose / Cloudflare edge deployment
 - [TDOP Docs](https://github.com/Tanzanian-Opportunities/TDOP-docs) — governance, specs, and project management
 - [Umbrella index](https://github.com/Tanzanian-Opportunities/Tanzanian_Opportunities) — full project overview
 - [Kanban board](https://github.com/orgs/Tanzanian-Opportunities/projects/1) — task tracking (mirrors `TDOP-docs/PROJECT_MANAGEMENT.md`)
+
+## License
+
+MIT - see [`LICENSE`](https://github.com/Tanzanian-Opportunities/TDOP-docs/blob/develop/LICENSE) (single license of record, kept in `TDOP-docs`).
