@@ -1,0 +1,136 @@
+name: Project board automation
+
+on:
+  issues:
+    types: [opened, assigned, closed]
+  pull_request:
+    types: [opened, closed, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  update-board:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move card to the target column
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || github.token }}
+          script: |
+            const OWNER = 'Tanzanian-Opportunities';
+            const PROJECT_NUMBER = 1;
+
+            // Automation rules (prompt section 4):
+            //   issue opened        -> BACKLOG
+            //   issue assigned      -> IN PROGRESS
+            //   issue closed        -> DONE
+            //   PR opened           -> CODE REVIEW (also moves closing-linked issues)
+            //   PR merged           -> TESTING   (never auto-Done)
+            const RULES = {
+              issue_opened: 'BACKLOG',
+              issue_assigned: 'IN PROGRESS',
+              issue_closed: 'DONE',
+              pr_opened: 'CODE REVIEW',
+              pr_merged: 'TESTING',
+            };
+
+            let target = null;
+            let contentId = null;
+            let closingIssueIds = [];
+
+            if (context.eventName === 'issues') {
+              const issue = context.payload.issue;
+              contentId = issue.node_id;
+              if (context.payload.action === 'opened') target = RULES.issue_opened;
+              else if (context.payload.action === 'assigned') target = RULES.issue_assigned;
+              else if (context.payload.action === 'closed') target = RULES.issue_closed;
+            } else if (context.eventName === 'pull_request') {
+              const pr = context.payload.pull_request;
+              contentId = pr.node_id;
+              const action = context.payload.action;
+              if (action === 'opened' || action === 'reopened') {
+                target = RULES.pr_opened;
+                const refs = await github.graphql(
+                  `query($owner: String!, $repo: String!, $number: Int!) {
+                     repository(owner: $owner, name: $repo) {
+                       pullRequest(number: $number) {
+                         closingIssuesReferences(first: 20) { nodes { id } }
+                       }
+                     }
+                   }`,
+                  { owner: context.repo.owner, repo: context.repo.repo, number: pr.number }
+                ).catch(() => null);
+                const nodes =
+                  refs?.repository?.pullRequest?.closingIssuesReferences?.nodes || [];
+                closingIssueIds = nodes.map((n) => n.id);
+              } else if (action === 'closed' && pr.merged) {
+                target = RULES.pr_merged;
+              }
+            }
+
+            if (!target || !contentId) {
+              core.info(`No rule matched (${context.eventName}/${context.payload.action}) - nothing to do.`);
+              return;
+            }
+
+            // Resolve project, status field, and option ids (identical for all repos).
+            const proj = await github.graphql(
+              `query($org: String!, $number: Int!) {
+                 organization(login: $org) {
+                   projectV2(number: $number) {
+                     id
+                     fields(first: 30) {
+                       nodes {
+                         __typename
+                         ... on ProjectV2SingleSelectField { id name options { id name } }
+                       }
+                     }
+                   }
+                 }
+               }`,
+              { org: OWNER, number: PROJECT_NUMBER }
+            );
+            const project = proj.organization.projectV2;
+            const single = project.fields.nodes.filter(
+              (f) => f.__typename === 'ProjectV2SingleSelectField'
+            );
+            const statusField =
+              single.find((f) => f.name === 'TDOP Status') || single.find((f) => f.name === 'Status');
+            if (!statusField) throw new Error('Status field not found on the board.');
+            const option = statusField.options.find((o) => o.name === target);
+            if (!option) throw new Error(`Option "${target}" not found on field "${statusField.name}".`);
+
+            async function move(contentNodeId) {
+              const added = await github.graphql(
+                `mutation($projectId: ID!, $contentId: ID!) {
+                   addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                     item { id }
+                   }
+                 }`,
+                { projectId: project.id, contentId: contentNodeId }
+              );
+              const itemId = added.addProjectV2ItemById.item.id;
+              await github.graphql(
+                `mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: ID!) {
+                   updateProjectV2ItemFieldValue(
+                     input: { projectId: $projectId, itemId: $itemId, fieldId: $fieldId,
+                              value: { singleSelectOptionId: $optionId } }
+                   ) { projectV2Item { id } }
+                 }`,
+                {
+                  projectId: project.id,
+                  itemId: itemId,
+                  fieldId: statusField.id,
+                  optionId: option.id,
+                }
+              );
+              core.info(`Moved ${contentNodeId} to ${target}.`);
+            }
+
+            await move(contentId);
+            for (const issueId of closingIssueIds) {
+              await move(issueId);
+            }

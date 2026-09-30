@@ -2,7 +2,7 @@
 name: Bug report
 about: Something is broken in a TDOP component repository
 title: ""
-labels: bug
+labels: type:bug
 assignees: ""
 ---
 

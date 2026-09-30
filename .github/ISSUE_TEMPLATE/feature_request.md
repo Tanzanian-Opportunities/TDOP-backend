@@ -2,7 +2,7 @@
 name: Feature / task request
 about: New work for TDOP — must map to the roadmap and task boards
 title: ""
-labels: enhancement
+labels: type:feature
 assignees: ""
 ---
 
@@ -12,7 +12,7 @@ assignees: ""
 
 **What should be built?**
 
-**Why (value / requirement reference)** — link the SRS/PRD requirement if applicable (`TDOP-docs/Specs/SRS.md`, `README_PRD.md`)
+**Why (value / requirement reference)** — link the SRS/PRD requirement if applicable (`TDOP-docs/docs/requirements/SRS.md`, `README_PRD.md`)
 
 **Acceptance criteria** (testable)
 
