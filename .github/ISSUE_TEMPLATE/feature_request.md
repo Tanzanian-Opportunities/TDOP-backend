@@ -6,7 +6,7 @@ labels: enhancement
 assignees: ""
 ---
 
-**Repository / area** (TDOP-backend / TDOP-frontend / TDOP-infra / TDOP-docs / TDOP-mobile / umbrella)
+**Repository / area** (TDOP-backend / TDOP-frontend / TDOP-infra / TDOP-docs / TDOP-mobile)
 
 **Phase / Task ID** — which phase of `TDOP-docs/TASK_BREAKDOWN.md` does this belong to? (Never start future-phase work.)
 

@@ -6,7 +6,7 @@ labels: bug
 assignees: ""
 ---
 
-**Repository / area** (TDOP-backend / TDOP-frontend / TDOP-infra / TDOP-docs / TDOP-mobile / umbrella)
+**Repository / area** (TDOP-backend / TDOP-frontend / TDOP-infra / TDOP-docs / TDOP-mobile)
 
 **Task ID (if any)** — `P<NN>-T<NN>`
 

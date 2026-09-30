@@ -219,7 +219,7 @@ The frontend container image uses its own simpler `nginx.conf` from `TDOP-fronte
 - [TDOP Frontend](https://github.com/Tanzanian-Opportunities/TDOP-frontend) — React + TypeScript SPA
 - [TDOP Infra](https://github.com/Tanzanian-Opportunities/TDOP-infra) — Docker Compose / Cloudflare edge deployment
 - [TDOP Docs](https://github.com/Tanzanian-Opportunities/TDOP-docs) — governance, specs, and project management
-- [Umbrella index](https://github.com/Tanzanian-Opportunities/Tanzanian_Opportunities) — full project overview
+- [Project overview](https://github.com/Tanzanian-Opportunities/TDOP-docs/blob/develop/PROJECT_OVERVIEW.md) - repository map, stack, quick start
 - [Kanban board](https://github.com/orgs/Tanzanian-Opportunities/projects/1) — task tracking (mirrors `TDOP-docs/PROJECT_MANAGEMENT.md`)
 
 ## License
