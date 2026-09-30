@@ -1,5 +1,5 @@
 # Stage 1: Build with Maven
-FROM eclipse-temurin:21-jdk-jammy AS build
+FROM eclipse-temurin:25-jdk-jammy AS build
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.m2 \
     mvn clean package -DskipTests -B
 
 # Stage 2: Run with JRE
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:25-jre-jammy AS runtime
 
 RUN groupadd -r tdop && useradd -r -g tdop -d /app tdop
 
